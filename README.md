@@ -2,7 +2,7 @@
 
 Worlds API is a REST API that can be used to manage, query, update, and reason
 over [SPARQL 1.1](https://www.w3.org/TR/sparql11-overview/)-compatible stores at
-the edge, within arm's reach of your AI agent.
+the edge, placing knowledge within arm's reach of your AI agent.
 
 ## BYOB
 
@@ -13,17 +13,42 @@ Bring your own **brain**. The Worlds API is agnostic to the agent using it.
 Worlds API is designed to be simple and easy to use. You can embed it in your
 agent applications, or run it locally or on the cloud.
 
+We aren't just handing off our work to agents, we're coming up with entirely new
+ways to work by delegating agents strategically and autonomously.
+
+## Motivation
+
+Legacy data architectures, designed for human-driven lookups, often collapse
+under the demands of autonomous agents that must infer, plan, and act on
+millions of decisions daily. Worlds API addresses the "Agentic Gap" by
+introducing formal semantics to the edge.
+
+- Reasoning over Retrieval: Agents do not just query data; they require
+  explainable reasoning chains. By leveraging formal ontologies, Worlds API
+  allows agents to derive conclusions from axioms rather than relying solely on
+  black-box probabilities.
+- Consistency at Machine Speed: In an agentic workflow, conflicting data (e.g.,
+  an entity classified as both "Open" and "Closed") must be detected
+  immediately. This API supports the consistency checking required to prevent
+  autonomous hallucinations or operational errors.
+- Open-World Assumption: Unlike proprietary graph databases that assume missing
+  data is false, Worlds API supports open-world reasoning. This allows agents to
+  treat unstated facts as "unknown," prompting them to seek additional
+  information rather than rejecting valid options due to incomplete data,
+  enabling compatibility and the ability for programs to be interoperable
+  without ever meeting or coordinating with each other.
+
 ## Etymology
 
 - **Quad** is the atomic unit of knowledge (also known as triple or triplet).
 - **Store** is a set of RDF quads. Each RDF store or network of RDF stores is a
   knowledge base.
-
-We posit that knowledge bases are a form of digital twin, a reified perspective
-or mirror of the world.
+- **Knowledge Base** is a form of digital twin, a reified perspective or mirror
+  of the world.
+- **World** is a source of truth for a knowledge base.
 
 We named the "Worlds API" after the management of multiple, coexisting
-**Worlds**.
+**Worlds** and their components.
 
 ## Benchmarks
 

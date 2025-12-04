@@ -1,5 +1,15 @@
 import { namedNode, quad, Store } from "oxigraph";
-import { decodeStore, encodeStore, encodings } from "./oxigraph-service.ts";
+import {
+  decodableEncodings,
+  decodeStore,
+  encodeStore,
+} from "./oxigraph-service.ts";
+
+const compressionFormats: CompressionFormat[] = [
+  "deflate",
+  "deflate-raw",
+  "gzip",
+];
 
 const decodedStore = new Store();
 decodedStore.add(
@@ -10,19 +20,50 @@ decodedStore.add(
   ),
 );
 
-for (const [name, encoding] of Object.entries(encodings)) {
-  const encodedStore = encodeStore(decodedStore, encoding);
+for (const [name, encoding] of Object.entries(decodableEncodings)) {
+  const encodedStore = await encodeStore(decodedStore, encoding);
   Deno.bench({
     name: `decodeStore ${name}`,
-    fn: () => {
-      decodeStore(encodedStore, encoding);
+    fn: async () => {
+      await decodeStore(encodedStore, encoding);
     },
   });
 
+  for (const compressionFormat of compressionFormats) {
+    const compressedStore = await encodeStore(
+      decodedStore,
+      encoding,
+      new CompressionStream(compressionFormat),
+    );
+    Deno.bench({
+      name: `decodeStore ${name} with ${compressionFormat}`,
+      fn: async () => {
+        await decodeStore(
+          compressedStore,
+          encoding,
+          new DecompressionStream(compressionFormat),
+        );
+      },
+    });
+  }
+
   Deno.bench({
     name: `encodeStore ${name}`,
-    fn: () => {
-      encodeStore(decodedStore, encoding);
+    fn: async () => {
+      await encodeStore(decodedStore, encoding);
     },
   });
+
+  for (const compressionFormat of compressionFormats) {
+    Deno.bench({
+      name: `encodeStore ${name} with ${compressionFormat}`,
+      fn: async () => {
+        await encodeStore(
+          decodedStore,
+          encoding,
+          new CompressionStream(compressionFormat),
+        );
+      },
+    });
+  }
 }

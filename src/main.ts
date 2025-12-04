@@ -5,7 +5,7 @@ import { Scalar } from "@scalar/hono-api-reference";
 
 const app = new OpenAPIHono();
 
-// Register the API routes for v1.
+// Register the v1 API routes.
 for await (
   const entry of expandGlob("**/*.ts", { root: "./src/api/v1" })
 ) {
