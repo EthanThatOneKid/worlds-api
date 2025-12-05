@@ -16,14 +16,14 @@ Deno.test("encodeStore and decodeStore with gzip compression", async () => {
   const compressionFormat = "gzip";
 
   // Encode with compression
-  const encoded = await encodeStore(
+  const encoded = encodeStore(
     store,
     encoding,
     new CompressionStream(compressionFormat),
   );
 
-  // Verify it's a Uint8Array
-  assertEquals(encoded instanceof Uint8Array, true);
+  // Verify it's a ReadableStream
+  assertEquals(encoded instanceof ReadableStream, true);
 
   // Decode with decompression
   const decodedStore = await decodeStore(
@@ -52,15 +52,14 @@ Deno.test("encodeStore and decodeStore without compression", async () => {
   const encoding = "application/n-quads";
 
   // Encode without compression
-  const encoded = await encodeStore(store, encoding);
+  const encoded = encodeStore(store, encoding);
 
-  // Verify it's a Uint8Array (as per new signature)
-  assertEquals(encoded instanceof Uint8Array, true);
+  // Verify it's a ReadableStream
+  assertEquals(encoded instanceof ReadableStream, true);
 
   // Decode without decompression
   const decodedStore = await decodeStore(encoded, encoding);
 
-  // Verify content
   // Verify content
   assertEquals(decodedStore.size, 1);
 });
@@ -90,7 +89,7 @@ Deno.test("encodeStore and decodeStore round trip with all formats and compressi
   for (const encoding of encodings) {
     // Test without compression
     {
-      const encoded = await encodeStore(store, encoding);
+      const encoded = encodeStore(store, encoding);
       const decoded = await decodeStore(encoded, encoding);
       assertEquals(decoded.size, 1);
       const quads = decoded.match();
@@ -100,7 +99,7 @@ Deno.test("encodeStore and decodeStore round trip with all formats and compressi
 
     // Test with each compression format
     for (const compression of compressionFormats) {
-      const encoded = await encodeStore(
+      const encoded = encodeStore(
         store,
         encoding,
         new CompressionStream(compression),

@@ -91,8 +91,8 @@ app.openapi(
       return ctx.json({ id: storeId });
     }
 
-    const data = await encodeStore(store, encoding as EncodableEncoding);
-    return ctx.body(data as Uint8Array<ArrayBuffer>, {
+    const data = encodeStore(store, encoding as EncodableEncoding);
+    return ctx.body(data, {
       headers: { "Content-Type": encoding },
     });
   },
@@ -142,7 +142,7 @@ export const postStoreRoute = createRoute({
 app.openapi(postStoreRoute, async (ctx) => {
   const encoding = ctx.req.header("Content-Type") ?? "application/json";
   const store = await decodeStore(
-    await ctx.req.raw.bytes(),
+    ctx.req.raw.body!, // Pass the stream directly
     encoding as DecodableEncoding,
   );
 

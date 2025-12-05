@@ -1,4 +1,3 @@
-import { toArrayBuffer, toText } from "@std/streams";
 import { Store } from "oxigraph";
 
 /**
@@ -34,46 +33,69 @@ export const encodableEncodings = {
 } as const;
 
 /**
- * encodeStore encodes a store into a Uint8Array, optionally compressed.
+ * Encodes a store into a byte stream.
  *
- * Recommended compression format: gzip
+ * @returns A ReadableStream that can be passed directly to a Response or consumed by Deno KV.
  */
-export async function encodeStore(
+export function encodeStore(
   store: Store,
   encoding: EncodableEncoding,
   compression?: CompressionStream,
-): Promise<Uint8Array> {
+): ReadableStream<Uint8Array> {
+  // Oxigraph dump is synchronous, so we start the stream with the string data.
   const stringData = store.dump({ format: encoding });
-  const encodedData = new TextEncoder().encode(stringData);
+
+  const stream = ReadableStream.from([stringData])
+    .pipeThrough(new TextEncoderStream());
+
   if (compression) {
-    const stream = ReadableStream.from([encodedData]).pipeThrough(compression);
-    const compressedData = new Uint8Array(await toArrayBuffer(stream));
-    return compressedData;
+    return stream.pipeThrough(
+      compression as unknown as ReadableWritablePair<Uint8Array, Uint8Array>,
+    );
   }
 
-  return encodedData;
+  return stream;
 }
 
 /**
- * decodeStore decodes a Uint8Array (or string) into a store, optionally decompressed.
- *
- * Recommended decompression format: gzip
+ * Decodes a byte stream into a Store.
+ * * @param stream - The raw byte stream (e.g. from ctx.req.raw.body)
  */
 export async function decodeStore(
-  data: Uint8Array,
+  stream: ReadableStream<Uint8Array>,
   encoding: DecodableEncoding,
   decompression?: DecompressionStream,
 ): Promise<Store> {
-  let encodedData: string;
+  let textStream: ReadableStream<string>;
+
   if (decompression) {
-    const stream = ReadableStream.from([data])
-      .pipeThrough(decompression as ReadableWritablePair);
-    encodedData = await toText(stream);
+    textStream = stream
+      .pipeThrough(
+        decompression as unknown as ReadableWritablePair<
+          Uint8Array,
+          Uint8Array
+        >,
+      )
+      .pipeThrough(new TextDecoderStream());
   } else {
-    encodedData = new TextDecoder().decode(data);
+    textStream = stream.pipeThrough(new TextDecoderStream());
+  }
+
+  // We accumulate the stream into a string because Oxigraph.load() is synchronous.
+  const reader = textStream.getReader();
+  const chunks: string[] = [];
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
   }
 
   const store = new Store();
-  store.load(encodedData, { format: encoding });
+  store.load(chunks.join(""), { format: encoding });
   return store;
 }

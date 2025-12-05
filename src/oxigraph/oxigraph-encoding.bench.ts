@@ -1,3 +1,4 @@
+import { toArrayBuffer } from "@std/streams";
 import { namedNode, quad, Store } from "oxigraph";
 import {
   decodableEncodings,
@@ -21,25 +22,35 @@ decodedStore.add(
 );
 
 for (const [name, encoding] of Object.entries(decodableEncodings)) {
-  const encodedStore = await encodeStore(decodedStore, encoding);
+  // Pre-calculate encoded bytes for decoding benchmarks
+  const encodedStream = encodeStore(decodedStore, encoding);
+  const encodedBytes = new Uint8Array(await toArrayBuffer(encodedStream));
+
   Deno.bench({
     name: `decodeStore ${name}`,
     fn: async () => {
-      await decodeStore(encodedStore, encoding);
+      // Must create a fresh stream for each iteration
+      const stream = ReadableStream.from([encodedBytes]);
+      await decodeStore(stream, encoding);
     },
   });
 
   for (const compressionFormat of compressionFormats) {
-    const compressedStore = await encodeStore(
+    const compressedStream = encodeStore(
       decodedStore,
       encoding,
       new CompressionStream(compressionFormat),
     );
+    const compressedBytes = new Uint8Array(
+      await toArrayBuffer(compressedStream),
+    );
+
     Deno.bench({
       name: `decodeStore ${name} with ${compressionFormat}`,
       fn: async () => {
+        const stream = ReadableStream.from([compressedBytes]);
         await decodeStore(
-          compressedStore,
+          stream,
           encoding,
           new DecompressionStream(compressionFormat),
         );
@@ -50,7 +61,8 @@ for (const [name, encoding] of Object.entries(decodableEncodings)) {
   Deno.bench({
     name: `encodeStore ${name}`,
     fn: async () => {
-      await encodeStore(decodedStore, encoding);
+      const stream = encodeStore(decodedStore, encoding);
+      await toArrayBuffer(stream);
     },
   });
 
@@ -58,11 +70,12 @@ for (const [name, encoding] of Object.entries(decodableEncodings)) {
     Deno.bench({
       name: `encodeStore ${name} with ${compressionFormat}`,
       fn: async () => {
-        await encodeStore(
+        const stream = encodeStore(
           decodedStore,
           encoding,
           new CompressionStream(compressionFormat),
         );
+        await toArrayBuffer(stream);
       },
     });
   }
