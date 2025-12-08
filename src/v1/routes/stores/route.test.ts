@@ -2,7 +2,8 @@ import { assertEquals } from "@std/assert";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Store } from "oxigraph";
 import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { app, withOxigraphService } from "./route.ts";
+import { withOxigraphService } from "#/oxigraph/oxigraph-middleware.ts";
+import { app } from "./route.ts";
 
 Deno.test("POST /v1/stores/{store} appends data", async () => {
   const kv = await Deno.openKv(":memory:");
@@ -25,7 +26,10 @@ Deno.test("POST /v1/stores/{store} appends data", async () => {
   const body = '<http://example.com/s2> <http://example.com/p> "o2" .';
   const req = new Request(`http://localhost/v1/stores/${storeId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/n-quads" },
+    headers: {
+      "Content-Type": "application/n-quads",
+      "Authorization": "Bearer test-token",
+    },
     body: body,
   });
 
@@ -39,7 +43,10 @@ Deno.test("POST /v1/stores/{store} appends data", async () => {
   // Verify using GET endpoint too
   const reqGet = new Request(`http://localhost/v1/stores/${storeId}`, {
     method: "GET",
-    headers: { "Accept": "application/n-quads" },
+    headers: {
+      "Accept": "application/n-quads",
+      "Authorization": "Bearer test-token",
+    },
   });
   const resGet = await testApp.request(reqGet);
   assertEquals(resGet.status, 200);

@@ -13,7 +13,7 @@
     "zod": "npm:zod@^4.1.13"
   },
   "tasks": {
-    "start": "deno serve -A --unstable-kv src/main.ts",
+    "start": "deno serve -A --env --unstable-kv src/main.ts",
     "test": "deno test -A --unstable-kv",
     "bench": "deno bench -A",
     "fmt": "deno fmt",

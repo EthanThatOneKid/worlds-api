@@ -1,7 +1,5 @@
 import { accepts } from "@std/http/negotiation";
-import type { MiddlewareHandler } from "hono";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
-import type { OxigraphService } from "#/oxigraph/oxigraph-service.ts";
 import type {
   DecodableEncoding,
   EncodableEncoding,
@@ -12,7 +10,7 @@ import {
   encodableEncodings,
   encodeStore,
 } from "#/oxigraph/oxigraph-encoding.ts";
-
+import type { OxigraphServiceEnv } from "#/oxigraph/oxigraph-middleware.ts";
 import {
   v1RdfContentSchema,
   v1StoreParamsSchema,
@@ -20,21 +18,6 @@ import {
 } from "#/v1/schemas/stores.ts";
 
 // Establish the app's environment.
-
-export interface OxigraphServiceEnv {
-  Variables: {
-    oxigraphService: OxigraphService;
-  };
-}
-
-export function withOxigraphService(
-  oxigraphService: OxigraphService,
-): MiddlewareHandler<OxigraphServiceEnv> {
-  return (ctx, next) => {
-    ctx.set("oxigraphService", oxigraphService);
-    return next();
-  };
-}
 
 export const app = new OpenAPIHono<OxigraphServiceEnv>();
 
@@ -47,6 +30,7 @@ export const v1GetStoreRoute = createRoute({
   request: {
     params: v1StoreParamsSchema,
   },
+  security: [{ Bearer: [] }],
   responses: {
     200: {
       description: "Get a store",
@@ -70,6 +54,7 @@ export const v1PutStoreRoute = createRoute({
   path: "/v1/stores/{store}",
   operationId: "setStore",
   description: "Overwrite the store's contents",
+  security: [{ Bearer: [] }],
   request: {
     params: v1StoreParamsSchema,
     body: {
@@ -94,6 +79,7 @@ export const v1PostStoreRoute = createRoute({
   path: "/v1/stores/{store}",
   operationId: "addQuads",
   description: "Add quads to the store",
+  security: [{ Bearer: [] }],
   request: {
     params: v1StoreParamsSchema,
     body: {
@@ -117,6 +103,7 @@ export const v1DeleteStoreRoute = createRoute({
   path: "/v1/stores/{store}",
   operationId: "removeStore",
   description: "Delete the store",
+  security: [{ Bearer: [] }],
   request: {
     params: v1StoreParamsSchema,
   },

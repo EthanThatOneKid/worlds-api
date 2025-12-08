@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Quad, Term } from "oxigraph";
-import type { OxigraphServiceEnv } from "#/v1/routes/stores/route.ts";
+import type { OxigraphServiceEnv } from "#/oxigraph/oxigraph-middleware.ts";
 import {
   v1QuerySparqlInputSchema,
   v1RdfContentSchema,
@@ -18,6 +18,7 @@ export const v1SparqlRoute = createRoute({
   path: "/v1/stores/{store}/sparql",
   operationId: "sparqlQuery",
   description: "Execute a SPARQL query (read-only)",
+  security: [{ Bearer: [] }],
   request: {
     params: v1StoreParamsSchema,
     query: v1QuerySparqlInputSchema,
@@ -42,6 +43,7 @@ export const v1SparqlPostRoute = createRoute({
   path: "/v1/stores/{store}/sparql",
   operationId: "sparqlUpdate",
   description: "Execute a SPARQL query or update",
+  security: [{ Bearer: [] }],
   request: {
     params: v1StoreParamsSchema,
     body: {

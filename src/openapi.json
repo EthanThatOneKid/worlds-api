@@ -9,6 +9,12 @@
     }
   },
   "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
     "schemas": {
       "V1Store": {
         "type": "object",
@@ -24,15 +30,15 @@
     },
     "parameters": {}
   },
-  "security": [
-    {
-      "bearerAuth": []
-    }
-  ],
   "paths": {
     "/v1/stores/{store}": {
       "get": {
         "operationId": "getStore",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -109,6 +115,11 @@
       "put": {
         "operationId": "setStore",
         "description": "Overwrite the store's contents",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -165,6 +176,11 @@
       "post": {
         "operationId": "addQuads",
         "description": "Add quads to the store",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -218,6 +234,11 @@
       "delete": {
         "operationId": "removeStore",
         "description": "Delete the store",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -241,6 +262,11 @@
       "get": {
         "operationId": "sparqlQuery",
         "description": "Execute a SPARQL query (read-only)",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {
@@ -394,6 +420,11 @@
       "post": {
         "operationId": "sparqlUpdate",
         "description": "Execute a SPARQL query or update",
+        "security": [
+          {
+            "Bearer": []
+          }
+        ],
         "parameters": [
           {
             "schema": {

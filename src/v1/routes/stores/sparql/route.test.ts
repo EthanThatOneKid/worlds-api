@@ -2,7 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { Store } from "oxigraph";
 import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { withOxigraphService } from "../route.ts";
+import { withOxigraphService } from "#/oxigraph/oxigraph-middleware.ts";
 import { app } from "./route.ts";
 
 Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
@@ -27,7 +27,10 @@ Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
     `http://localhost/v1/stores/${storeId}/sparql?query=${query}`,
     {
       method: "GET",
-      headers: { "Accept": "application/sparql-results+json" },
+      headers: {
+        "Accept": "application/sparql-results+json",
+        "Authorization": "Bearer test-token",
+      },
     },
   );
 
@@ -71,6 +74,7 @@ Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Quer
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       "Accept": "application/sparql-results+json",
+      "Authorization": "Bearer test-token",
     },
     body: body.toString(),
   });
@@ -106,7 +110,10 @@ Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", asyn
     'INSERT DATA { <http://example.com/s> <http://example.com/p> "o" }';
   const req = new Request(`http://localhost/v1/stores/${storeId}/sparql`, {
     method: "POST",
-    headers: { "Content-Type": "application/sparql-update" },
+    headers: {
+      "Content-Type": "application/sparql-update",
+      "Authorization": "Bearer test-token",
+    },
     body: update,
   });
 

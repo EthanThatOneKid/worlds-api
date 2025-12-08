@@ -1,10 +1,10 @@
 import { expandGlob } from "@std/fs/expand-glob";
 import { toFileUrl } from "@std/path/to-file-url";
-import { OpenAPIHono } from "@hono/zod-openapi";
 import { bearerAuth } from "hono/bearer-auth";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { withOxigraphService } from "#/v1/routes/stores/route.ts";
+import { withOxigraphService } from "#/oxigraph/oxigraph-middleware.ts";
 
 const app = new OpenAPIHono();
 
@@ -18,8 +18,21 @@ app.use("*", withOxigraphService(service));
 // Initialize API security.
 
 app.use(
-  "*",
-  bearerAuth({ token: Deno.env.get("SECRET_TOKEN")! }),
+  "/v1/*",
+  bearerAuth({
+    verifyToken(token, _ctx) {
+      return token === (Deno.env.get("SECRET_TOKEN") ?? "test-token");
+    },
+  }),
+);
+
+app.openAPIRegistry.registerComponent(
+  "securitySchemes",
+  "Bearer",
+  {
+    type: "http",
+    scheme: "bearer",
+  },
 );
 
 // Register the v1 API routes.
@@ -48,19 +61,6 @@ export const openapiConfig = {
       url: "https://github.com/FartLabs/worlds-api/issues",
     },
   },
-  components: {
-    securitySchemes: {
-      bearerAuth: {
-        type: "http",
-        scheme: "bearer",
-      },
-    },
-  },
-  security: [
-    {
-      bearerAuth: [],
-    },
-  ],
 };
 
 app.doc("/doc", openapiConfig);
