@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { type Quad, type Term } from "oxigraph";
-import type { OxigraphServiceEnv } from "../route.ts";
+import type { Quad, Term } from "oxigraph";
+import type { OxigraphServiceEnv } from "#/v1/routes/stores/route.ts";
 import {
   v1QuerySparqlInputSchema,
   v1RdfContentSchema,
@@ -10,6 +10,8 @@ import {
 } from "#/v1/schemas/stores.ts";
 
 export const app = new OpenAPIHono<OxigraphServiceEnv>();
+
+// Define routes.
 
 export const v1SparqlRoute = createRoute({
   method: "get",
@@ -187,6 +189,7 @@ function serializeTerm(term: Term): unknown {
   } else if (term.termType === "DefaultGraph") {
     return null;
   }
+
   // Fallback for unexpected objects
   return { type: "unknown", value: String(term.value) };
 }

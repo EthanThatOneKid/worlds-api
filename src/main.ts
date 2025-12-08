@@ -1,17 +1,30 @@
 import { expandGlob } from "@std/fs/expand-glob";
 import { toFileUrl } from "@std/path/to-file-url";
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { bearerAuth } from "hono/bearer-auth";
 import { Scalar } from "@scalar/hono-api-reference";
-
 import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
 import { withOxigraphService } from "#/v1/routes/stores/route.ts";
 
 const app = new OpenAPIHono();
 
+// Initialize Oxigraph service.
+
 const kv = await Deno.openKv(":memory:");
 const service = new DenoKvOxigraphService(kv);
 
 app.use("*", withOxigraphService(service));
+
+// Initialize API security.
+
+app.use(
+  "*",
+  bearerAuth({
+    verifyToken: (token) => {
+      return token === Deno.env.get("SECRET_TOKEN");
+    },
+  }),
+);
 
 // Register the v1 API routes.
 
@@ -39,6 +52,20 @@ export const openapiConfig = {
       url: "https://github.com/FartLabs/worlds-api/issues",
     },
   },
+  components: {
+    securitySchemes: {
+      apiKey: {
+        type: "apiKey",
+        in: "header",
+        name: "X-API-Key",
+      },
+    },
+  },
+  security: [
+    {
+      apiKey: [],
+    },
+  ],
 };
 
 app.doc("/doc", openapiConfig);

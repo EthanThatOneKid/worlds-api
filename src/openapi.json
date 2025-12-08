@@ -24,6 +24,11 @@
     },
     "parameters": {}
   },
+  "security": [
+    {
+      "apiKey": []
+    }
+  ],
   "paths": {
     "/v1/stores/{store}": {
       "get": {

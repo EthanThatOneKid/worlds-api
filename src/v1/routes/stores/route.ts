@@ -38,8 +38,6 @@ export function withOxigraphService(
 
 export const app = new OpenAPIHono<OxigraphServiceEnv>();
 
-// Define shared schemas.
-
 // Define routes.
 
 export const v1GetStoreRoute = createRoute({
