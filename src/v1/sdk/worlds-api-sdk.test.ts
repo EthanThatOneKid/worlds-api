@@ -15,7 +15,10 @@ globalThis.fetch = (
 };
 
 Deno.test("e2e WorldsApiSdk", async (t) => {
-  const sdk = new WorldsApiSdk("http://localhost/v1", Deno.env.get("API_KEY")!);
+  const sdk = new WorldsApiSdk({
+    baseUrl: "http://localhost/v1",
+    apiKey: Deno.env.get("API_KEY")!,
+  });
 
   await t.step("getStore returns null for non-existent store", async () => {
     const store = await sdk.getStore(

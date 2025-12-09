@@ -8,8 +8,10 @@ import type {
  */
 export class WorldsApiSdk {
   public constructor(
-    public readonly baseUrl: string,
-    public readonly apiKey: string,
+    public readonly options: {
+      baseUrl: string;
+      apiKey: string;
+    },
   ) {}
 
   /**
@@ -19,9 +21,9 @@ export class WorldsApiSdk {
     storeId: string,
     encoding: DecodableEncoding,
   ): Promise<string | null> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}`, {
+    const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.options.apiKey}`,
         "Accept": encoding,
       },
     });
@@ -44,10 +46,10 @@ export class WorldsApiSdk {
     store: string,
     encoding: EncodableEncoding,
   ): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}`, {
+    const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       method: "PUT",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.options.apiKey}`,
         "Content-Type": encoding,
       },
       body: store,
@@ -66,10 +68,10 @@ export class WorldsApiSdk {
     data: string,
     encoding: EncodableEncoding,
   ): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}`, {
+    const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.options.apiKey}`,
         "Content-Type": encoding,
       },
       body: data,
@@ -83,10 +85,10 @@ export class WorldsApiSdk {
    * deleteStore deletes a store from the Worlds API.
    */
   public async deleteStore(storeId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}`, {
+    const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       method: "DELETE",
       headers: {
-        Authorization: `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.options.apiKey}`,
       },
     });
     if (!response.ok) {
@@ -102,15 +104,18 @@ export class WorldsApiSdk {
     storeId: string,
     query: string,
   ): Promise<unknown> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}/sparql`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/sparql-query",
-        "Accept": "application/sparql-results+json",
+    const response = await fetch(
+      `${this.options.baseUrl}/stores/${storeId}/sparql`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+          "Content-Type": "application/sparql-query",
+          "Accept": "application/sparql-results+json",
+        },
+        body: query,
       },
-      body: query,
-    });
+    );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -125,14 +130,17 @@ export class WorldsApiSdk {
     storeId: string,
     update: string,
   ): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/stores/${storeId}/sparql`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.apiKey}`,
-        "Content-Type": "application/sparql-update",
+    const response = await fetch(
+      `${this.options.baseUrl}/stores/${storeId}/sparql`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+          "Content-Type": "application/sparql-update",
+        },
+        body: update,
       },
-      body: update,
-    });
+    );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

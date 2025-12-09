@@ -48,7 +48,8 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
         return new Response(data, {
           headers: { "Content-Type": encoding },
         });
-      } catch (_e) {
+      } catch (e) {
+        console.error("Encoding failed:", e);
         return Response.json({ error: "Encoding failed" }, { status: 500 });
       }
     })

@@ -86,6 +86,39 @@ Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Quer
   assertEquals(json.results.bindings.length, 1);
 });
 
+Deno.test("POST /v1/stores/{store}/sparql (sparql-query) executes SPARQL Query", async () => {
+  const storeId = "test-store-sparql-post-query";
+
+  // Setup data via API
+  const initialBody = '<http://example.com/s> <http://example.com/p> "o" .\n';
+  await app.fetch(
+    new Request(`http://localhost/v1/stores/${storeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/n-quads",
+        "Authorization": "Bearer test-token",
+      },
+      body: initialBody,
+    }),
+  );
+
+  const query = "SELECT ?s WHERE { ?s ?p ?o }";
+  const req = new Request(`http://localhost/v1/stores/${storeId}/sparql`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/sparql-query",
+      "Accept": "application/sparql-results+json",
+      "Authorization": "Bearer test-token",
+    },
+    body: query,
+  });
+
+  const res = await app.fetch(req);
+  assertEquals(res.status, 200);
+  const json = await res.json();
+  assertEquals(json.results.bindings.length, 1);
+});
+
 Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", async () => {
   const storeId = "test-store-sparql-update-direct";
 
