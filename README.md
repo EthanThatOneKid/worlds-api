@@ -18,27 +18,54 @@ Worlds API™ is designed to be simple and easy to use. You can embed it in your
 agent applications, or run it locally or on the cloud.
 
 We aren't just handing off our work to agents, we're coming up with entirely new
-ways to work by delegating agents strategically and autonomously.
+ways to work by grounding our agents in malleable knowledge.
 
 ## Etymology
 
-- **Quad** is the atomic unit of knowledge (also known as triple or triplet).
-- **Store** is a set of RDF quads. Each RDF store or network of RDF stores is a
+We named the Worlds API™ after the management of multiple, coexisting **Worlds**
+and their components.
+
+- **Triple** is the atomic unit of knowledge (also known as triplet or quad).
+- **Graph** is a collection of triples. Each graph or graph network is a
   knowledge base.
 - **Knowledge Base** is a form of digital twin, a reified perspective or mirror
   of the world.
 - **World** is a source of truth for a knowledge base.
 
-We named the "Worlds API" after the management of multiple, coexisting
-**Worlds** and their components.
+## Glossary
 
-## Codegen
+Study more terminology.
 
-Generate TypeScript client SDKs using
-[hey-api/openapi-ts](https://github.com/hey-api/openapi-ts):
+- **API** is an Application Programming Interface used by developers to leverage
+  the underlying functionality of a program or service.
+- **Neuro-symbolic AI** is an AI system that combines the strengths of neural
+  networks and structured data.
+- **RDF**[^1] is a World Wide Web Consortium (W3C) standard for representing
+  information in a machine-readable way.
+- **SPARQL**[^2] is a World Wide Web Consortium (W3C) standard for querying and
+  updating RDF data.
+- **Semantic Web**[^3] is a global initiative to make the web more
+  machine-readable, sometimes referred to as **Web 3.0**.
+- **World Wide Web Consortium (W3C)**[^4] is an international organization that
+  develops Web standards such as HTML, CSS, and JavaScript.
+- **Ontology** is a formal description of a domain of knowledge, interchangeably
+  referred to as a **Vocabulary**.
 
-```bash
-deno -A npm:@hey-api/openapi-ts -i ./src/openapi.json -o ./src/client
+## Develop
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+Once you have cloned the repository, you can start the development server.
+
+```sh
+deno task start
+```
+
+Please run this command to format, lint, and test the code before submitting a
+pull request.
+
+```sh
+deno task precommit
 ```
 
 ## Benchmarks
@@ -81,3 +108,11 @@ This work is inspired by some of the following research papers:
 ---
 
 Developed with 🧪 [**@FartLabs**](https://github.com/FartLabs)
+
+[^1]: https://www.w3.org/TR/rdf11-concepts/
+
+[^2]: https://www.w3.org/TR/sparql11-overview/
+
+[^3]: https://en.wikipedia.org/wiki/Semantic_Web
+
+[^4]: https://www.w3.org/
