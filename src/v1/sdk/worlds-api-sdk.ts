@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { v1SparqlQueryResultsSchema } from "#/v1/schemas.ts";
 
 /**
@@ -75,7 +75,8 @@ export class WorldsApiSdk {
       body: data,
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
     }
   }
 
@@ -90,7 +91,8 @@ export class WorldsApiSdk {
       },
     });
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const text = await response.text();
+      throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
     }
   }
 

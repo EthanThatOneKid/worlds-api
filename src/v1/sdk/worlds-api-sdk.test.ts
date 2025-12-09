@@ -29,12 +29,11 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
   });
 
   await t.step("setStore sets the store", async () => {
-    const store = await sdk.setStore(
+    await sdk.setStore(
       "test",
       '<http://example.com/s> <http://example.com/p> "o" .\n',
       "application/n-quads",
     );
-    assert(store !== null);
   });
 
   await t.step("getStore returns data for existing store", async () => {
@@ -43,12 +42,11 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
   });
 
   await t.step("addQuads adds quads to store", async () => {
-    const store = await sdk.addQuads(
+    await sdk.addQuads(
       "test",
       '<http://example.com/s2> <http://example.com/p> "o2" .\n',
       "application/n-quads",
     );
-    assert(store !== null);
   });
 
   await t.step("query returns results for existing store", async () => {
@@ -61,15 +59,13 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
   });
 
   await t.step("update updates the store", async () => {
-    const store = await sdk.update(
+    await sdk.update(
       "test",
       'INSERT DATA { <http://example.com/s3> <http://example.com/p> "o3" }',
     );
-    assert(store !== null);
   });
 
   await t.step("removeStore removes the store", async () => {
-    const store = await sdk.removeStore("test");
-    assert(store !== null);
+    await sdk.removeStore("test");
   });
 });

@@ -93,12 +93,7 @@ export async function decodeStore(
 
   const fullText = chunks.join("");
   const store = new Store();
-  try {
-    store.load(fullText, { format: encoding });
-  } catch (err) {
-    console.error("Failed to parse RDF:");
-    console.error(fullText.slice(0, 100)); // Log first 100 chars
-    throw err;
-  }
+  store.load(fullText, { format: encoding });
+
   return store;
 }

@@ -20,7 +20,7 @@ export async function auth(
   }
 
   // Check if token is in the apiKeysService
-  if (apiKeysService && await apiKeysService.has(token)) {
+  if (await apiKeysService?.has(token)) {
     return true;
   }
 

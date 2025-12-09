@@ -48,8 +48,7 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
         return new Response(data, {
           headers: { "Content-Type": encoding },
         });
-      } catch (e) {
-        console.error("Encoding failed:", e);
+      } catch (_error) {
         return Response.json({ error: "Encoding failed" }, { status: 500 });
       }
     })
@@ -89,11 +88,9 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
 
         await oxigraphService.setStore(storeId, store);
         return new Response(null, { status: 204 });
-      } catch (err) {
-        console.error("RDF Parse Error (PUT):", err);
-        console.error("Body Text (PUT):", bodyText);
+      } catch (error) {
         return Response.json(
-          { error: "Invalid RDF Syntax", details: String(err) },
+          { error: "Invalid RDF Syntax", details: String(error) },
           { status: 400 },
         );
       }
@@ -134,11 +131,9 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
 
         await oxigraphService.addQuads(storeId, store.match());
         return new Response(null, { status: 204 });
-      } catch (err) {
-        console.error("RDF Parse Error:", err);
-        console.error("Body Text:", bodyText);
+      } catch (error) {
         return Response.json(
-          { error: "Invalid RDF Syntax", details: String(err) },
+          { error: "Invalid RDF Syntax", details: String(error) },
           { status: 400 },
         );
       }
