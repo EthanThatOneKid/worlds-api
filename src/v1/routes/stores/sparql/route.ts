@@ -7,13 +7,16 @@ import { serializeSparqlResult } from "./sparql-result-serializer.ts";
 export default ({ oxigraphService, apiKeysService }: AppContext) => {
   return new Router()
     .get("/v1/stores/:store/sparql", async (ctx) => {
-      const isAuthenticated = await auth(ctx.request, apiKeysService);
+      const storeId = ctx.params?.pathname.groups.store;
+      if (!storeId) return new Response("Store ID required", { status: 400 });
+
+      const isAuthenticated = await auth(ctx.request, {
+        storeId,
+        apiKeys: apiKeysService,
+      });
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
-
-      const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
 
       const url = new URL(ctx.request.url);
       const query = url.searchParams.get("query");
@@ -35,13 +38,16 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
       }
     })
     .post("/v1/stores/:store/sparql", async (ctx) => {
-      const isAuthenticated = await auth(ctx.request, apiKeysService);
+      const storeId = ctx.params?.pathname.groups.store;
+      if (!storeId) return new Response("Store ID required", { status: 400 });
+
+      const isAuthenticated = await auth(ctx.request, {
+        storeId,
+        apiKeys: apiKeysService,
+      });
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
-
-      const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
 
       let parsed;
       try {

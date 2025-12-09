@@ -22,7 +22,7 @@ Deno.test("e2e InternalWorldsApiSdk", async (t) => {
   const testKey = "test-api-key-" + Date.now();
 
   await t.step("addApiKey adds a new API key", async () => {
-    await sdk.addApiKey(testKey);
+    await sdk.addApiKey(testKey, "test-store");
   });
 
   await t.step("removeApiKey removes an API key", async () => {
@@ -36,7 +36,7 @@ Deno.test("e2e InternalWorldsApiSdk", async (t) => {
     });
 
     await assertRejects(
-      async () => await invalidSdk.addApiKey("some-key"),
+      async () => await invalidSdk.addApiKey("some-key", "test-store"),
       Error,
       "401",
     );

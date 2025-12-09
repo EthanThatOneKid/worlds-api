@@ -11,19 +11,24 @@ export class DenoKvApiKeysService implements ApiKeysService {
     private readonly prefix: Deno.KvKey = ["api_keys"],
   ) {}
 
-  public async add(key: string): Promise<void> {
-    await this.kv.set([...this.prefix, key], true);
+  /**
+   * add adds a new API key to the store.
+   */
+  public async add(key: string, storeId: string): Promise<void> {
+    await this.kv.set([...this.prefix, key], storeId);
   }
 
-  public async has(key: string): Promise<boolean> {
-    if (key === Deno.env.get("API_KEY")) {
-      return true;
-    }
-
-    const result = await this.kv.get<boolean>([...this.prefix, key]);
-    return result.value === true;
+  /**
+   * get returns the associated store ID for the given API key.
+   */
+  public async get(key: string): Promise<string | null> {
+    const result = await this.kv.get<string>([...this.prefix, key]);
+    return result.value;
   }
 
+  /**
+   * remove removes the API key from the store.
+   */
   public async remove(key: string): Promise<void> {
     await this.kv.delete([...this.prefix, key]);
   }

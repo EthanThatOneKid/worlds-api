@@ -16,14 +16,20 @@ export default ({ apiKeysService }: AppContext) => {
         return Response.json({ error: "Invalid JSON" }, { status: 400 });
       }
 
-      const { key } = body;
-      if (!key || typeof key !== "string") {
-        return Response.json({ error: "Missing or invalid key" }, {
+      const { apiKey, storeId } = body;
+      if (typeof apiKey !== "string") {
+        return Response.json({ error: "Missing or invalid apiKey" }, {
           status: 400,
         });
       }
 
-      await apiKeysService.add(key);
+      if (!storeId || typeof storeId !== "string") {
+        return Response.json({ error: "Missing or invalid storeId" }, {
+          status: 400,
+        });
+      }
+
+      await apiKeysService.add(apiKey, storeId);
       return new Response(null, { status: 204 });
     })
     .delete("/v1/api-keys/:key", async (ctx) => {
