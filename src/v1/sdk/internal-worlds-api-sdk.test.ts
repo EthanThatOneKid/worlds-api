@@ -1,24 +1,23 @@
 import { assertRejects } from "@std/assert/rejects";
-import { createApp } from "../../../main.ts";
 import { kvAppContext } from "#/app-context.ts";
+import apiKeysApp from "#/v1/routes/api-keys/route.ts";
 import { InternalWorldsApiSdk } from "./internal-worlds-api-sdk.ts";
 
 const kv = await Deno.openKv(":memory:");
-const app = await createApp(kvAppContext(kv));
-
-globalThis.fetch = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-): Promise<Response> => {
-  const request = new Request(input, init);
-  return app.fetch(request);
-};
 
 Deno.test("e2e InternalWorldsApiSdk", async (t) => {
   const sdk = new InternalWorldsApiSdk({
     baseUrl: "http://localhost/v1",
     apiKey: Deno.env.get("API_KEY")!,
   });
+
+  globalThis.fetch = (
+    input: RequestInfo | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    const request = new Request(input, init);
+    return apiKeysApp(kvAppContext(kv)).fetch(request);
+  };
 
   const testKey = "test-api-key-" + Date.now();
 
