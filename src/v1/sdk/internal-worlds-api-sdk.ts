@@ -23,8 +23,7 @@ export class InternalWorldsApiSdk {
       body: JSON.stringify({ apiKey, storeId }),
     });
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`HTTP error! status: ${response.status}, body: ${text}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
