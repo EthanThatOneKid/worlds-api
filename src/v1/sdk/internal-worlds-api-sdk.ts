@@ -1,14 +1,13 @@
+import { WorldsApiSdk } from "./worlds-api-sdk.ts";
+
 /**
  * InternalWorldsApiSdk is a TypeScript SDK for internal/owner-only operations
  * on the Worlds API.
  */
-export class InternalWorldsApiSdk {
-  public constructor(
-    public readonly options: {
-      baseUrl: string;
-      apiKey: string;
-    },
-  ) {}
+export class InternalWorldsApiSdk extends WorldsApiSdk {
+  public constructor(options: WorldsApiSdk["options"]) {
+    super(options);
+  }
 
   /**
    * addApiKey adds a new API key to the Worlds API.
