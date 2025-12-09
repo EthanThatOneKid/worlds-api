@@ -1,29 +1,26 @@
 import { assertEquals } from "@std/assert";
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { Store } from "oxigraph";
-import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { withOxigraphService } from "#/oxigraph/oxigraph-middleware.ts";
-import { app } from "./route.ts";
+import { createApp } from "../../../../main.ts";
+import { kvAppContext } from "#/v1/context.ts";
+
+const kv = await Deno.openKv(":memory:");
+const app = await createApp(kvAppContext(kv));
 
 Deno.test("POST /v1/stores/{store} appends data", async () => {
-  const kv = await Deno.openKv(":memory:");
-  const service = new DenoKvOxigraphService(kv);
   const storeId = "test-store-api";
 
-  // Initialize with some data
-  const store1 = new Store();
-  store1.load('<http://example.com/s1> <http://example.com/p> "o1" .', {
-    format: "application/n-quads",
+  const initialBody = '<http://example.com/s1> <http://example.com/p> "o1" .\n';
+  const reqInit = new Request(`http://localhost/v1/stores/${storeId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/n-quads",
+      "Authorization": "Bearer test-token",
+    },
+    body: initialBody,
   });
-  await service.setStore(storeId, store1);
+  await app.fetch(reqInit);
 
-  // Setup app with service
-  const testApp = new OpenAPIHono();
-  testApp.use("*", withOxigraphService(service));
-  testApp.route("/", app);
-
-  // Make request
-  const body = '<http://example.com/s2> <http://example.com/p> "o2" .';
+  // Make request to append
+  const body = '<http://example.com/s2> <http://example.com/p> "o2" .\n';
   const req = new Request(`http://localhost/v1/stores/${storeId}`, {
     method: "POST",
     headers: {
@@ -33,14 +30,10 @@ Deno.test("POST /v1/stores/{store} appends data", async () => {
     body: body,
   });
 
-  const res = await testApp.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 204);
 
-  // Verify in service
-  const resultStore = await service.getStore(storeId);
-  assertEquals(resultStore?.size, 2);
-
-  // Verify using GET endpoint too
+  // Verify using GET endpoint
   const reqGet = new Request(`http://localhost/v1/stores/${storeId}`, {
     method: "GET",
     headers: {
@@ -48,12 +41,10 @@ Deno.test("POST /v1/stores/{store} appends data", async () => {
       "Authorization": "Bearer test-token",
     },
   });
-  const resGet = await testApp.request(reqGet);
+  const resGet = await app.fetch(reqGet);
   assertEquals(resGet.status, 200);
   const bodyGet = await resGet.text();
   // Simple check
   assertEquals(bodyGet.includes('"o1"'), true);
   assertEquals(bodyGet.includes('"o2"'), true);
-
-  kv.close();
 });

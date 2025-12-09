@@ -1,4 +1,4 @@
-import { z } from "@hono/zod-openapi";
+import { z } from "zod";
 
 // Define schemas for RDF/JS terms.
 
@@ -30,10 +30,7 @@ const v1QuadSchema = z.object({
  * v1StoreParamsSchema represents a store identifier.
  */
 export const v1StoreParamsSchema = z.object({
-  store: z.string().min(1).openapi({
-    param: { name: "store", in: "path" },
-    example: "my-graph-db",
-  }),
+  store: z.string().min(1),
 });
 
 export const v1SparqlBindingsSchema = z.record(
@@ -95,9 +92,6 @@ export const v1SparqlResultsSchema = z.object({
 
 export const v1StoreSchema = z.object({
   id: z.string(),
-}).openapi("V1Store");
-
-export const v1RdfContentSchema = z.unknown().openapi({
-  type: "string",
-  format: "binary",
 });
+
+export const v1RdfContentSchema = z.unknown();

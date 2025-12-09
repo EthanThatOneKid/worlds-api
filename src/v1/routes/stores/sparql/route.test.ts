@@ -1,26 +1,25 @@
 import { assert, assertEquals } from "@std/assert";
-import { OpenAPIHono } from "@hono/zod-openapi";
-import { Store } from "oxigraph";
-import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { withOxigraphService } from "#/oxigraph/oxigraph-middleware.ts";
-import { app } from "./route.ts";
+import { createApp } from "../../../../../main.ts";
+import { kvAppContext } from "#/v1/context.ts";
+
+const kv = await Deno.openKv(":memory:");
+const app = await createApp(kvAppContext(kv));
 
 Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
-  const kv = await Deno.openKv(":memory:");
-  const service = new DenoKvOxigraphService(kv);
   const storeId = "test-store-sparql-get";
 
-  // Setup data
-  const store = new Store();
-  store.load('<http://example.com/s> <http://example.com/p> "o" .', {
-    format: "application/n-quads",
-  });
-  await service.setStore(storeId, store);
-
-  // Setup app
-  const testApp = new OpenAPIHono();
-  testApp.use("*", withOxigraphService(service));
-  testApp.route("/", app);
+  // Setup data via API
+  const initialBody = '<http://example.com/s> <http://example.com/p> "o" .\n';
+  await app.fetch(
+    new Request(`http://localhost/v1/stores/${storeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/n-quads",
+        "Authorization": "Bearer test-token",
+      },
+      body: initialBody,
+    }),
+  );
 
   const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
   const req = new Request(
@@ -34,7 +33,7 @@ Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
     },
   );
 
-  const res = await testApp.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 200);
   const json = await res.json();
 
@@ -47,26 +46,23 @@ Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
   const binding = json.results.bindings[0];
   assertEquals(binding.s.type, "uri");
   assertEquals(binding.s.value, "http://example.com/s");
-
-  kv.close();
 });
 
 Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Query", async () => {
-  const kv = await Deno.openKv(":memory:");
-  const service = new DenoKvOxigraphService(kv);
   const storeId = "test-store-sparql-post-form";
 
-  // Setup data
-  const store = new Store();
-  store.load('<http://example.com/s> <http://example.com/p> "o" .', {
-    format: "application/n-quads",
-  });
-  await service.setStore(storeId, store);
-
-  // Setup app
-  const testApp = new OpenAPIHono();
-  testApp.use("*", withOxigraphService(service));
-  testApp.route("/", app);
+  // Setup data via API
+  const initialBody = '<http://example.com/s> <http://example.com/p> "o" .\n';
+  await app.fetch(
+    new Request(`http://localhost/v1/stores/${storeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/n-quads",
+        "Authorization": "Bearer test-token",
+      },
+      body: initialBody,
+    }),
+  );
 
   const body = new URLSearchParams({ query: "SELECT ?s WHERE { ?s ?p ?o }" });
   const req = new Request(`http://localhost/v1/stores/${storeId}/sparql`, {
@@ -79,7 +75,7 @@ Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Quer
     body: body.toString(),
   });
 
-  const res = await testApp.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 200);
   const json = await res.json();
 
@@ -88,23 +84,22 @@ Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Quer
   assert(json.results);
   assert(Array.isArray(json.results.bindings));
   assertEquals(json.results.bindings.length, 1);
-
-  kv.close();
 });
 
 Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", async () => {
-  const kv = await Deno.openKv(":memory:");
-  const service = new DenoKvOxigraphService(kv);
   const storeId = "test-store-sparql-update-direct";
 
-  // Setup data
-  const store = new Store();
-  await service.setStore(storeId, store);
-
-  // Setup app
-  const testApp = new OpenAPIHono();
-  testApp.use("*", withOxigraphService(service));
-  testApp.route("/", app);
+  // Initialize store (empty)
+  await app.fetch(
+    new Request(`http://localhost/v1/stores/${storeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/n-quads",
+        "Authorization": "Bearer test-token",
+      },
+      body: "",
+    }),
+  );
 
   const update =
     'INSERT DATA { <http://example.com/s> <http://example.com/p> "o" }';
@@ -117,12 +112,20 @@ Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", asyn
     body: update,
   });
 
-  const res = await testApp.request(req);
+  const res = await app.fetch(req);
   assertEquals(res.status, 204);
 
-  // Verify
-  const result = await service.getStore(storeId);
-  assertEquals(result?.size, 1);
-
-  kv.close();
+  // Verify using query
+  const query = encodeURIComponent("SELECT * WHERE { ?s ?p ?o }");
+  const resQuery = await app.fetch(
+    new Request(
+      `http://localhost/v1/stores/${storeId}/sparql?query=${query}`,
+      {
+        method: "GET",
+        headers: { "Authorization": "Bearer test-token" },
+      },
+    ),
+  );
+  const json = await resQuery.json();
+  assertEquals(json.results.bindings.length, 1);
 });
