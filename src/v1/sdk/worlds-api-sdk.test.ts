@@ -1,6 +1,6 @@
 import { assert } from "@std/assert/assert";
 import { createApp } from "../../../main.ts";
-import { kvAppContext } from "#/v1/context.ts";
+import { kvAppContext } from "#/v1/app-context.ts";
 import { WorldsApiSdk } from "./worlds-api-sdk.ts";
 
 const kv = await Deno.openKv(":memory:");
@@ -52,11 +52,12 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
   });
 
   await t.step("query returns results for existing store", async () => {
-    const store = await sdk.query(
+    const results = await sdk.query(
       "test",
       "SELECT ?s ?p ?o WHERE { ?s ?p ?o }",
     );
-    assert(store !== null);
+    assert(Array.isArray(results));
+    assert(results.length > 0);
   });
 
   await t.step("update updates the store", async () => {

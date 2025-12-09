@@ -10,7 +10,7 @@ import {
   encodableEncodings,
   encodeStore,
 } from "#/oxigraph/oxigraph-encoding.ts";
-import type { AppContext } from "#/v1/context.ts";
+import type { AppContext } from "#/v1/app-context.ts";
 import { auth } from "#/v1/auth.ts";
 
 export default ({ oxigraphService, apiKeysService }: AppContext) => {

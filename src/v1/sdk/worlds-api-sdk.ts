@@ -1,7 +1,5 @@
-import type {
-  DecodableEncoding,
-  EncodableEncoding,
-} from "#/oxigraph/oxigraph-encoding.ts";
+import { z } from "zod";
+import { v1SparqlQueryResultsSchema } from "#/v1/schemas.ts";
 
 /**
  * WorldsApiSdk is a TypeScript SDK for the Worlds API.
@@ -19,7 +17,7 @@ export class WorldsApiSdk {
    */
   public async getStore(
     storeId: string,
-    encoding: DecodableEncoding,
+    encoding: string,
   ): Promise<string | null> {
     const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       headers: {
@@ -44,7 +42,7 @@ export class WorldsApiSdk {
   public async setStore(
     storeId: string,
     store: string,
-    encoding: EncodableEncoding,
+    encoding: string,
   ): Promise<void> {
     const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       method: "PUT",
@@ -66,7 +64,7 @@ export class WorldsApiSdk {
   public async addQuads(
     storeId: string,
     data: string,
-    encoding: EncodableEncoding,
+    encoding: string,
   ): Promise<void> {
     const response = await fetch(`${this.options.baseUrl}/stores/${storeId}`, {
       method: "POST",
@@ -103,7 +101,7 @@ export class WorldsApiSdk {
   public async query(
     storeId: string,
     query: string,
-  ): Promise<unknown> {
+  ): Promise<z.infer<typeof v1SparqlQueryResultsSchema>> {
     const response = await fetch(
       `${this.options.baseUrl}/stores/${storeId}/sparql`,
       {
@@ -120,7 +118,9 @@ export class WorldsApiSdk {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    const json = await response.json();
+    // Validate and parse the response using the schema
+    return v1SparqlQueryResultsSchema.parse(json);
   }
 
   /**

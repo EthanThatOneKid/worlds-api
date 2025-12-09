@@ -1,6 +1,6 @@
 import { assert, assertEquals } from "@std/assert";
-import { createApp } from "../../../../main.ts";
-import { kvAppContext } from "#/v1/context.ts";
+import { kvAppContext } from "#/v1/app-context.ts";
+import createApp from "./route.ts";
 
 const kv = await Deno.openKv(":memory:");
 const app = await createApp(kvAppContext(kv));
