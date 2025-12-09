@@ -16,7 +16,7 @@ import { auth } from "#/v1/auth.ts";
 export default ({ oxigraphService, apiKeysService }: AppContext) => {
   return new Router()
     .get("/v1/stores/:store", async (ctx) => {
-      const isAuthenticated = await auth(apiKeysService, ctx.request);
+      const isAuthenticated = await auth(ctx.request, apiKeysService);
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -54,7 +54,7 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
       }
     })
     .put("/v1/stores/:store", async (ctx) => {
-      const isAuthenticated = await auth(apiKeysService, ctx.request);
+      const isAuthenticated = await auth(ctx.request, apiKeysService);
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -99,7 +99,7 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
       }
     })
     .post("/v1/stores/:store", async (ctx) => {
-      const isAuthenticated = await auth(apiKeysService, ctx.request);
+      const isAuthenticated = await auth(ctx.request, apiKeysService);
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
@@ -144,7 +144,7 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
       }
     })
     .delete("/v1/stores/:store", async (ctx) => {
-      const isAuthenticated = await auth(apiKeysService, ctx.request);
+      const isAuthenticated = await auth(ctx.request, apiKeysService);
       if (!isAuthenticated) {
         return new Response("Unauthorized", { status: 401 });
       }
