@@ -5,6 +5,15 @@ import { authorizeRequest } from "#/accounts/authorize.ts";
 
 export default ({ accountsService }: AppContext) => {
   return new Router()
+    .get("/v1/accounts", async (ctx) => {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized?.admin) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const accounts = await accountsService.listAccounts();
+      return Response.json(accounts);
+    })
     .post("/v1/accounts", async (ctx) => {
       const authorized = await authorizeRequest(accountsService, ctx.request);
       if (!authorized?.admin) {

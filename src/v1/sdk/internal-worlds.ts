@@ -110,4 +110,21 @@ export class InternalWorlds extends Worlds {
 
     return await response.json();
   }
+
+  /**
+   * listAccounts retrieves all accounts from the Worlds API.
+   * This is an admin-only operation.
+   */
+  public async listAccounts(): Promise<Account[]> {
+    const response = await fetch(`${this.options.baseUrl}/accounts`, {
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }

@@ -26,6 +26,11 @@ export interface AccountsService {
    * getUsageSummary retrieves the usage summary for an account.
    */
   getUsageSummary(accountId: string): Promise<AccountUsageSummary | null>;
+
+  /**
+   * listAccounts retrieves all accounts.
+   */
+  listAccounts(): Promise<Account[]>;
 }
 
 /**

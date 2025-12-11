@@ -15,6 +15,32 @@ import { authorizeRequest } from "#/accounts/authorize.ts";
 
 export default ({ oxigraphService, accountsService }: AppContext) => {
   return new Router()
+    .get("/v1/stores", async (ctx) => {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      // Admin users get all stores
+      if (authorized.admin) {
+        const allStores = await oxigraphService.listStores();
+        return Response.json(allStores);
+      }
+
+      // Regular users get only their accessible stores
+      if (!authorized.account) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      // If wildcard access, return all stores
+      if (authorized.account.accessControl.stores.includes("*")) {
+        const allStores = await oxigraphService.listStores();
+        return Response.json(allStores);
+      }
+
+      // Return only accessible stores
+      return Response.json(authorized.account.accessControl.stores);
+    })
     .get("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
       if (!storeId) {
@@ -59,6 +85,31 @@ export default ({ oxigraphService, accountsService }: AppContext) => {
       } catch (_error) {
         return Response.json({ error: "Encoding failed" }, { status: 500 });
       }
+    })
+    .get("/v1/stores/:store/metadata", async (ctx) => {
+      const storeId = ctx.params?.pathname.groups.store;
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
+
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      const metadata = await oxigraphService.getStoreMetadata(storeId);
+      if (!metadata) {
+        return new Response("Store not found", { status: 404 });
+      }
+
+      return Response.json(metadata);
     })
     .put("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;

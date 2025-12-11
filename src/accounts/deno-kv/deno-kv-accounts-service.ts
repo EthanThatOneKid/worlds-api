@@ -69,4 +69,18 @@ export class DenoKvAccountsService implements AccountsService {
     );
     return result.value;
   }
+
+  public async listAccounts(): Promise<Account[]> {
+    const accounts: Account[] = [];
+    const iter = this.kv.list<Account>({ prefix: this.prefix });
+
+    for await (const entry of iter) {
+      // Only include entries that are accounts (not events or usage summaries)
+      if (entry.key.length === this.prefix.length + 1 && entry.value) {
+        accounts.push(entry.value);
+      }
+    }
+
+    return accounts;
+  }
 }
