@@ -68,6 +68,19 @@ pull request.
 deno task precommit
 ```
 
+## Papers
+
+This work is inspired by some of the following research papers:
+
+- [Thinking with Knowledge Graphs: Enhancing LLM Reasoning Through Structured Data](https://arxiv.org/abs/2412.10654)
+- [A Benchmark to Understand the Role of Knowledge Graphs on Large Language Model's Accuracy for Question Answering on Enterprise SQL Databases](https://arxiv.org/abs/2311.07509)
+- [Jelly: a Fast and Convenient RDF Serialization Format](https://arxiv.org/abs/2506.11298)
+- [An AI System to Help Scientists Write Expert-Level Empirical Software](https://arxiv.org/abs/2509.06503)
+- [NeSy is Alive and Well: A LLM-Driven Symbolic Approach for Better Code Comment Data Generation and Classification](https://arxiv.org/abs/2402.16910)
+- [Inverse Knowledge Search over Verifiable Reasoning: Synthesizing a Scientific Encyclopedia from a Long Chains-of-Thought Knowledge Base](https://arxiv.org/abs/2510.26854)
+- [Graph-Constrained Reasoning: Faithful Reasoning on Knowledge Graphs with Large Language Models](https://arxiv.org/abs/2410.13080)
+- [MemGPT: Towards LLMs as Operating Systems](https://arxiv.org/abs/2310.08560)
+
 ## Benchmarks
 
 Here are benchmark results testing the speed of encoding/decoding Oxigraph
@@ -91,18 +104,6 @@ file:///C:/Users/ethan/Documents/GitHub/worlds-api/src/oxigraph/oxigraph-service
 | decodeStore trig     |         17.0 µs |        58,980 | (  6.7 µs …   4.8 ms) |   9.0 µs | 316.1 µs | 760.7 µs |
 | encodeStore trig     |          3.1 µs |       318,700 | (  3.0 µs …   3.8 µs) |   3.2 µs |   3.8 µs |   3.8 µs |
 ```
-
-## Papers
-
-This work is inspired by some of the following research papers:
-
-- [Thinking with Knowledge Graphs: Enhancing LLM Reasoning Through Structured Data](https://arxiv.org/abs/2412.10654)
-- [A Benchmark to Understand the Role of Knowledge Graphs on Large Language Model's Accuracy for Question Answering on Enterprise SQL Databases](https://arxiv.org/abs/2311.07509)
-- [Jelly: a Fast and Convenient RDF Serialization Format](https://arxiv.org/abs/2506.11298)
-- [An AI System to Help Scientists Write Expert-Level Empirical Software](https://arxiv.org/abs/2509.06503)
-- [NeSy is Alive and Well: A LLM-Driven Symbolic Approach for Better Code Comment Data Generation and Classification](https://arxiv.org/abs/2402.16910)
-- [Inverse Knowledge Search over Verifiable Reasoning: Synthesizing a Scientific Encyclopedia from a Long Chains-of-Thought Knowledge Base](https://arxiv.org/abs/2510.26854)
-- [Graph-Constrained Reasoning: Faithful Reasoning on Knowledge Graphs with Large Language Models](https://arxiv.org/abs/2410.13080)
 
 ---
 

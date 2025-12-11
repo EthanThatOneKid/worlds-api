@@ -1,10 +1,11 @@
-import type { ApiKeysService } from "#/api-keys/api-keys-service.ts";
+import type { AccountsService } from "#/accounts/accounts-service.ts";
+import { authorize } from "#/accounts/authorize.ts";
 
 export async function auth(
   request: Request,
   options?: {
     storeId: string;
-    apiKeys: ApiKeysService;
+    accounts: AccountsService;
   },
 ): Promise<boolean> {
   const authHeader = request.headers.get("Authorization");
@@ -17,15 +18,22 @@ export async function auth(
     return false;
   }
 
-  // Check if token matches the owner API_KEY (grants access to all stores)
-  if (token === Deno.env.get("API_KEY")) {
+  // Check if token matches the owner ADMIN_ACCOUNT_ID (grants access to all stores)
+  if (token === Deno.env.get("ADMIN_ACCOUNT_ID")) {
     return true;
   }
 
   // Check if token has access to the requested store
   if (options) {
-    const authorizedStoreId = await options.apiKeys.get(token);
-    return authorizedStoreId === options.storeId;
+    try {
+      const account = await authorize(options.accounts, token);
+      if (!account) {
+        return false;
+      }
+      return account.accessControl.stores.includes(options.storeId);
+    } catch {
+      return false;
+    }
   }
 
   return false;

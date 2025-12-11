@@ -8,7 +8,6 @@ const appContext = kvAppContext(kv);
 const app = new Router();
 
 const routes = [
-  "v1/routes/api-keys/route.ts",
   "v1/routes/stores/route.ts",
   "v1/routes/stores/sparql/route.ts",
 ];

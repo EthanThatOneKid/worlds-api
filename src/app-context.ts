@@ -1,16 +1,16 @@
 import type { OxigraphService } from "#/oxigraph/oxigraph-service.ts";
-import type { ApiKeysService } from "#/api-keys/api-keys-service.ts";
-import { DenoKvOxigraphService } from "#/oxigraph/deno-kv-oxigraph-service.ts";
-import { DenoKvApiKeysService } from "#/api-keys/deno-kv-api-keys-service.ts";
+import type { AccountsService } from "./accounts/accounts-service.ts";
+import { DenoKvOxigraphService } from "./oxigraph/deno-kv/deno-kv-oxigraph-service.ts";
+import { DenoKvAccountsService } from "./accounts/deno-kv/deno-kv-accounts-service.ts";
 
 export interface AppContext {
   oxigraphService: OxigraphService;
-  apiKeysService: ApiKeysService;
+  accountsService: AccountsService;
 }
 
 export function kvAppContext(kv: Deno.Kv): AppContext {
   return {
     oxigraphService: new DenoKvOxigraphService(kv),
-    apiKeysService: new DenoKvApiKeysService(kv),
+    accountsService: new DenoKvAccountsService(kv),
   };
 }

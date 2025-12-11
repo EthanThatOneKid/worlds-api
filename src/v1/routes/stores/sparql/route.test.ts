@@ -2,10 +2,29 @@ import { assert, assertEquals } from "@std/assert";
 import { Store } from "oxigraph";
 import { kvAppContext } from "#/app-context.ts";
 import createApp from "./route.ts";
+import type { Account } from "#/accounts/accounts-service.ts";
 
 const kv = await Deno.openKv(":memory:");
 const ctx = kvAppContext(kv);
 const app = await createApp(ctx);
+
+// Create a test account with access to all test stores
+const testAccount: Account = {
+  id: "test-account",
+  description: "Test account for SPARQL route tests",
+  plan: "free_plan",
+  accessControl: {
+    stores: [
+      "test-store-sparql-get",
+      "test-store-sparql-post-form",
+      "test-store-sparql-post-query",
+      "test-store-sparql-update-direct",
+    ],
+  },
+};
+await ctx.accountsService.set(testAccount);
+
+const testApiKey = "test-account";
 
 Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
   const storeId = "test-store-sparql-get";
@@ -24,7 +43,7 @@ Deno.test("GET /v1/stores/{store}/sparql executes SPARQL Query", async () => {
       method: "GET",
       headers: {
         "Accept": "application/sparql-results+json",
-        "Authorization": "Bearer test-token",
+        "Authorization": `Bearer ${testApiKey}`,
       },
     },
   );
@@ -58,7 +77,7 @@ Deno.test("POST /v1/stores/{store}/sparql (form-urlencoded) executes SPARQL Quer
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
       "Accept": "application/sparql-results+json",
-      "Authorization": "Bearer test-token",
+      "Authorization": `Bearer ${testApiKey}`,
     },
     body: body.toString(),
   });
@@ -88,7 +107,7 @@ Deno.test("POST /v1/stores/{store}/sparql (sparql-query) executes SPARQL Query",
     headers: {
       "Content-Type": "application/sparql-query",
       "Accept": "application/sparql-results+json",
-      "Authorization": "Bearer test-token",
+      "Authorization": `Bearer ${testApiKey}`,
     },
     body: query,
   });
@@ -113,7 +132,7 @@ Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", asyn
     method: "POST",
     headers: {
       "Content-Type": "application/sparql-update",
-      "Authorization": "Bearer test-token",
+      "Authorization": `Bearer ${testApiKey}`,
     },
     body: update,
   });
@@ -128,7 +147,7 @@ Deno.test("POST /v1/stores/{store}/sparql (direct) executes SPARQL Update", asyn
       `http://localhost/v1/stores/${storeId}/sparql?query=${query}`,
       {
         method: "GET",
-        headers: { "Authorization": "Bearer test-token" },
+        headers: { "Authorization": `Bearer ${testApiKey}` },
       },
     ),
   );

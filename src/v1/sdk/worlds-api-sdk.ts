@@ -1,3 +1,7 @@
+// TODO: Rename class to Worlds.
+
+// Permissions API has resources ApiKeys and Roles for access control and authorization.  This is separate from the usage api which tracks the events triggered by api key and meters usage based on the permissions associated with the api key.
+
 /**
  * WorldsApiSdk is a TypeScript SDK for the Worlds API.
  */

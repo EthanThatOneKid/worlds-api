@@ -1,26 +1,35 @@
 import { toArrayBuffer } from "@std/streams";
 import type { Quad, Term } from "oxigraph";
 import { Store } from "oxigraph";
-import type { OxigraphService } from "./oxigraph-service.ts";
-import type { DecodableEncoding } from "./oxigraph-encoding.ts";
+import type { OxigraphService } from "#/oxigraph/oxigraph-service.ts";
+import type { DecodableEncoding } from "#/oxigraph/oxigraph-encoding.ts";
 import {
   decodableEncodings,
   decodeStore,
   encodeStore,
-} from "./oxigraph-encoding.ts";
+} from "#/oxigraph/oxigraph-encoding.ts";
 
+/**
+ * DenoKvOxigraphService implements OxigraphService using `Deno.Kv`.
+ */
 export class DenoKvOxigraphService implements OxigraphService {
   public constructor(
     private readonly kv: Deno.Kv,
     private readonly prefix: Deno.KvKey = ["stores"],
     private readonly storageEncoding: DecodableEncoding = decodableEncodings.nq,
     private readonly compressionFormat: CompressionFormat = "gzip",
+    //
+    // TODO: Add encryption support.
   ) {}
+
+  private storeKey(id: Deno.KvKeyPart): Deno.KvKey {
+    return [...this.prefix, id];
+  }
 
   public async getStore(
     id: string,
   ): Promise<Store | null> {
-    const result = await this.kv.get<Uint8Array>([...this.prefix, id]);
+    const result = await this.kv.get<Uint8Array>(this.storeKey(id));
     if (result.value === null) {
       return null;
     }
@@ -41,8 +50,6 @@ export class DenoKvOxigraphService implements OxigraphService {
     id: string,
     store: Store,
   ): Promise<void> {
-    const key = [...this.prefix, id];
-
     // 1. Get the stream from the encoder
     const stream = encodeStore(
       store,
@@ -54,15 +61,12 @@ export class DenoKvOxigraphService implements OxigraphService {
     const encodedBuffer = new Uint8Array(await toArrayBuffer(stream));
 
     // 3. Perform atomic update
-    await this.kv.set(key, encodedBuffer);
+    await this.kv.set(this.storeKey(id), encodedBuffer);
   }
 
   public async addQuads(id: string, quads: Quad[]): Promise<void> {
     // 1. Get existing store (or new)
-    let store = await this.getStore(id);
-    if (!store) {
-      store = new Store();
-    }
+    const store = await this.getStore(id) ?? (new Store());
 
     // 2. Add quads
     for (const quad of quads) {
@@ -96,6 +100,6 @@ export class DenoKvOxigraphService implements OxigraphService {
   }
 
   public async removeStore(id: string): Promise<void> {
-    await this.kv.delete([...this.prefix, id]);
+    await this.kv.delete(this.storeKey(id));
   }
 }

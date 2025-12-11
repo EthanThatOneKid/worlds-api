@@ -1,4 +1,5 @@
 import { WorldsApiSdk } from "./worlds-api-sdk.ts";
+import type { Account } from "#/accounts/accounts-service.ts";
 
 /**
  * InternalWorldsApiSdk is a TypeScript SDK for internal/owner-only operations
@@ -10,32 +11,75 @@ export class InternalWorldsApiSdk extends WorldsApiSdk {
   }
 
   /**
-   * addApiKey adds a new API key to the Worlds API.
+   * createAccount creates a new account in the Worlds API.
    */
-  public async addApiKey(apiKey: string, storeId: string): Promise<void> {
-    const response = await fetch(`${this.options.baseUrl}/api-keys`, {
+  public async createAccount(account: Account): Promise<Account> {
+    const response = await fetch(`${this.options.baseUrl}/accounts`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.options.apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ apiKey, storeId }),
+      body: JSON.stringify(account),
     });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  /**
+   * getAccount retrieves an account from the Worlds API.
+   */
+  public async getAccount(accountId: string): Promise<Account> {
+    const response = await fetch(
+      `${this.options.baseUrl}/accounts/${accountId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  }
+
+  /**
+   * updateAccount updates an existing account in the Worlds API.
+   */
+  public async updateAccount(account: Account): Promise<void> {
+    const response = await fetch(
+      `${this.options.baseUrl}/accounts/${account.id}`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(account),
+      },
+    );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
   }
 
   /**
-   * removeApiKey removes an API key from the Worlds API.
+   * deleteAccount removes an account from the Worlds API.
    */
-  public async removeApiKey(apiKey: string): Promise<void> {
-    const response = await fetch(`${this.options.baseUrl}/api-keys/${apiKey}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${this.options.apiKey}`,
+  public async deleteAccount(accountId: string): Promise<void> {
+    const response = await fetch(
+      `${this.options.baseUrl}/accounts/${accountId}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+        },
       },
-    });
+    );
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

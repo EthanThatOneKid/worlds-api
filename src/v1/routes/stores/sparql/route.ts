@@ -1,20 +1,26 @@
 import { Router } from "@fartlabs/rt";
 import type { AppContext } from "#/app-context.ts";
-import { auth } from "#/auth.ts";
+import { authorizeRequest } from "#/accounts/authorize.ts";
 import { parseSparqlRequest } from "./sparql-request-parser.ts";
 import { serializeSparqlResult } from "./sparql-result-serializer.ts";
 
-export default ({ oxigraphService, apiKeysService }: AppContext) => {
+export default ({ oxigraphService, accountsService }: AppContext) => {
   return new Router()
     .get("/v1/stores/:store/sparql", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
         return new Response("Unauthorized", { status: 401 });
       }
 
@@ -39,13 +45,19 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
     })
     .post("/v1/stores/:store/sparql", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
         return new Response("Unauthorized", { status: 401 });
       }
 

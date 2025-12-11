@@ -3,13 +3,28 @@ import { kvAppContext } from "#/app-context.ts";
 import storesApp from "#/v1/routes/stores/route.ts";
 import storesSparqlApp from "#/v1/routes/stores/sparql/route.ts";
 import { WorldsApiSdk } from "./worlds-api-sdk.ts";
+import type { Account } from "#/accounts/accounts-service.ts";
 
 const kv = await Deno.openKv(":memory:");
+const appContext = kvAppContext(kv);
+
+// Create a test account with access to test stores
+const testAccount: Account = {
+  id: "test-account",
+  description: "Test account for SDK tests",
+  plan: "free_plan",
+  accessControl: {
+    stores: ["non-existent-store", "test"],
+  },
+};
+await appContext.accountsService.set(testAccount);
+
+const testApiKey = "test-account";
 
 Deno.test("e2e WorldsApiSdk", async (t) => {
   const sdk = new WorldsApiSdk({
     baseUrl: "http://localhost/v1",
-    apiKey: Deno.env.get("API_KEY")!,
+    apiKey: testApiKey,
   });
 
   globalThis.fetch = (
@@ -17,7 +32,7 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
-    return storesApp(kvAppContext(kv)).fetch(request);
+    return storesApp(appContext).fetch(request);
   };
 
   await t.step("getStore returns null for non-existent store", async () => {
@@ -54,7 +69,7 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
-    return storesSparqlApp(kvAppContext(kv)).fetch(request);
+    return storesSparqlApp(appContext).fetch(request);
   };
 
   await t.step("query returns results for existing store", async () => {
@@ -78,7 +93,7 @@ Deno.test("e2e WorldsApiSdk", async (t) => {
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
-    return storesApp(kvAppContext(kv)).fetch(request);
+    return storesApp(appContext).fetch(request);
   };
 
   await t.step("removeStore removes the store", async () => {

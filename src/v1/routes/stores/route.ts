@@ -11,19 +11,25 @@ import {
   encodeStore,
 } from "#/oxigraph/oxigraph-encoding.ts";
 import type { AppContext } from "#/app-context.ts";
-import { auth } from "#/auth.ts";
+import { authorizeRequest } from "#/accounts/authorize.ts";
 
-export default ({ oxigraphService, apiKeysService }: AppContext) => {
+export default ({ oxigraphService, accountsService }: AppContext) => {
   return new Router()
     .get("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
         return new Response("Unauthorized", { status: 401 });
       }
 
@@ -37,7 +43,6 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
         ...Object.values(encodableEncodings),
       ];
       const encoding = accepts(ctx.request, ...supported) ?? "application/json";
-
       if (encoding === "application/json") {
         return Response.json({ id: storeId });
       }
@@ -57,15 +62,23 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
     })
     .put("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
         return new Response("Unauthorized", { status: 401 });
       }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      // Check if the store exists and if we are creating a new store.
 
       const contentType = ctx.request.headers.get("Content-Type");
 
@@ -103,15 +116,23 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
     })
     .post("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
         return new Response("Unauthorized", { status: 401 });
       }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      // Check if the store exists and if we are creating a new store.
 
       const contentType = ctx.request.headers.get("Content-Type");
 
@@ -149,13 +170,19 @@ export default ({ oxigraphService, apiKeysService }: AppContext) => {
     })
     .delete("/v1/stores/:store", async (ctx) => {
       const storeId = ctx.params?.pathname.groups.store;
-      if (!storeId) return new Response("Store ID required", { status: 400 });
+      if (!storeId) {
+        return new Response("Store ID required", { status: 400 });
+      }
 
-      const isAuthenticated = await auth(ctx.request, {
-        storeId,
-        apiKeys: apiKeysService,
-      });
-      if (!isAuthenticated) {
+      const authorized = await authorizeRequest(accountsService, ctx.request);
+      if (!authorized) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+
+      if (
+        !authorized.admin &&
+        !authorized.account?.accessControl.stores.includes(storeId)
+      ) {
         return new Response("Unauthorized", { status: 401 });
       }
 
