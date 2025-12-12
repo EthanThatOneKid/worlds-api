@@ -11,6 +11,7 @@ const app = await createApp(ctx);
 // Create a test account with access to all test worlds
 const testAccount: Account = {
   id: "test-account",
+  apiKey: "sk_test_sparql_test",
   description: "Test account for SPARQL route tests",
   plan: "free_plan",
   accessControl: {
@@ -24,7 +25,7 @@ const testAccount: Account = {
 };
 await ctx.accountsService.set(testAccount);
 
-const testApiKey = "test-account";
+const testApiKey = "sk_test_sparql_test";
 
 Deno.test("GET /v1/worlds/{world}/sparql executes SPARQL Query", async () => {
   const worldId = "test-world-sparql-get";

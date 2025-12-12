@@ -29,13 +29,14 @@ export async function authorizeRequest(
  */
 export async function authorize(
   accounts: AccountsService,
-  accountId: string,
+  apiKey: string,
 ): Promise<AuthorizedRequest | null> {
-  if (accountId === Deno.env.get("ADMIN_ACCOUNT_ID")) {
+  // Service Role / Root Key check
+  if (apiKey === Deno.env.get("ADMIN_ACCOUNT_ID")) {
     return { admin: true };
   }
 
-  const account = await accounts.get(accountId);
+  const account = await accounts.getByApiKey(apiKey);
   if (!account) {
     return null;
   }

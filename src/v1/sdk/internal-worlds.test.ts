@@ -26,6 +26,7 @@ Deno.test("e2e InternalWorlds", async (t) => {
   const testAccountId = "test-account-" + Date.now();
   const testAccount: Account = {
     id: testAccountId,
+    apiKey: "sk_test_123",
     description: "Test account for SDK",
     plan: "free_plan",
     accessControl: {
@@ -121,6 +122,7 @@ Deno.test("e2e InternalWorlds", async (t) => {
 
     const usageTestAccount: Account = {
       id: "usage-test-account",
+      apiKey: "sk_test_456",
       description: "Account for usage testing",
       plan: "free_plan",
       accessControl: { worlds: [] },

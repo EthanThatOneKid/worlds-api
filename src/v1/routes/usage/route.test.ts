@@ -12,7 +12,8 @@ const app = await createApp(appContext);
 
 // Create a test account
 const testAccount: Account = {
-  id: "test-account",
+  id: "55555555-5555-4555-8555-555555555555",
+  apiKey: "sk_test_msg",
   description: "Test account for usage route tests",
   plan: "free_plan",
   accessControl: {
@@ -21,13 +22,14 @@ const testAccount: Account = {
 };
 await appContext.accountsService.set(testAccount);
 
-const testApiKey = "test-account";
+const testApiKey = "sk_test_msg";
+Deno.env.set("ADMIN_ACCOUNT_ID", "admin-secret-token");
 
 Deno.test("GET /v1/usage returns usage summary for authenticated user", async () => {
   // First, create some usage data
   const event: AccountUsageEvent = {
     id: "event-1",
-    accountId: "test-account",
+    accountId: "55555555-5555-4555-8555-555555555555",
     timestamp: Date.now(),
     endpoint: "GET /worlds/{worldId}",
     params: { worldId: "test-store-1" },
@@ -52,7 +54,8 @@ Deno.test("GET /v1/usage returns usage summary for authenticated user", async ()
 Deno.test("GET /v1/usage returns empty summary when no usage exists", async () => {
   // Create a new account with no usage
   const newAccount: Account = {
-    id: "new-account",
+    id: "66666666-6666-4666-8666-666666666666",
+    apiKey: "sk_test_new",
     description: "New account with no usage",
     plan: "free_plan",
     accessControl: {
@@ -64,7 +67,7 @@ Deno.test("GET /v1/usage returns empty summary when no usage exists", async () =
   const req = new Request("http://localhost/v1/usage", {
     method: "GET",
     headers: {
-      "Authorization": "Bearer new-account",
+      "Authorization": "Bearer sk_test_new",
     },
   });
   const res = await app.fetch(req);
@@ -86,7 +89,7 @@ Deno.test("GET /v1/usage with admin account and accountId query param", async ()
   // Create some usage for test-account
   const event: AccountUsageEvent = {
     id: "event-admin-test",
-    accountId: "test-account",
+    accountId: "55555555-5555-4555-8555-555555555555",
     timestamp: Date.now(),
     endpoint: "POST /worlds/{worldId}",
     params: { worldId: "test-store-2" },
@@ -96,7 +99,7 @@ Deno.test("GET /v1/usage with admin account and accountId query param", async ()
 
   const adminAccountId = Deno.env.get("ADMIN_ACCOUNT_ID") || "admin";
   const req = new Request(
-    `http://localhost/v1/usage?accountId=test-account`,
+    `http://localhost/v1/usage?accountId=55555555-5555-4555-8555-555555555555`,
     {
       method: "GET",
       headers: {

@@ -12,6 +12,7 @@ Deno.test("DenoKvAccountsService.set and get - create and retrieve account", asy
 
   const account: Account = {
     id: "test-account-1",
+    apiKey: "sk_test_123",
     description: "Test account",
     plan: "free_plan",
     accessControl: {
@@ -47,6 +48,7 @@ Deno.test("DenoKvAccountsService.set - updates existing account", async () => {
 
   const account: Account = {
     id: "test-account-2",
+    apiKey: "sk_test_456",
     description: "Original description",
     plan: "free_plan",
     accessControl: {
@@ -80,6 +82,7 @@ Deno.test("DenoKvAccountsService.remove - deletes account", async () => {
 
   const account: Account = {
     id: "test-account-3",
+    apiKey: "sk_test_789",
     description: "To be deleted",
     plan: "free_plan",
     accessControl: {

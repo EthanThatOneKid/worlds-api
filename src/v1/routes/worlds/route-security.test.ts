@@ -6,10 +6,12 @@ import type { Account } from "#/accounts/accounts-service.ts";
 const kv = await Deno.openKv(":memory:");
 const appContext = kvAppContext(kv);
 const app = await createApp(appContext);
+Deno.env.set("ADMIN_ACCOUNT_ID", "admin-secret-token");
 
 Deno.test("Security: world creation automatically grants access", async () => {
   const testAccount: Account = {
     id: "security-test-account-1",
+    apiKey: "sk_test_123",
     description: "Test account for security",
     plan: "free_plan",
     accessControl: {
@@ -23,7 +25,7 @@ Deno.test("Security: world creation automatically grants access", async () => {
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${testAccount.id}`,
+      "Authorization": `Bearer ${testAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o" .',
   });
@@ -45,6 +47,7 @@ Deno.test("Security: world creation automatically grants access", async () => {
 Deno.test("Security: Plan limit enforcement for free plan", async () => {
   const testAccount: Account = {
     id: "security-test-account-2",
+    apiKey: "sk_test_456",
     description: "Test account for plan limits",
     plan: "free_plan",
     accessControl: {
@@ -60,7 +63,7 @@ Deno.test("Security: Plan limit enforcement for free plan", async () => {
       method: "PUT",
       headers: {
         "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testAccount.id}`,
+        "Authorization": `Bearer ${testAccount.apiKey}`,
       },
       body: '<http://example.com/s> <http://example.com/p> "o" .',
     });
@@ -74,7 +77,7 @@ Deno.test("Security: Plan limit enforcement for free plan", async () => {
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${testAccount.id}`,
+      "Authorization": `Bearer ${testAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o" .',
   });
@@ -90,6 +93,7 @@ Deno.test("Security: Plan limit enforcement for free plan", async () => {
 Deno.test("Security: Only owner can delete world", async () => {
   const ownerAccount: Account = {
     id: "security-test-owner",
+    apiKey: "sk_test_owner",
     description: "Owner account",
     plan: "free_plan",
     accessControl: {
@@ -100,6 +104,7 @@ Deno.test("Security: Only owner can delete world", async () => {
 
   const otherAccount: Account = {
     id: "security-test-other",
+    apiKey: "sk_test_other",
     description: "Other account",
     plan: "free_plan",
     accessControl: {
@@ -114,7 +119,7 @@ Deno.test("Security: Only owner can delete world", async () => {
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${ownerAccount.id}`,
+      "Authorization": `Bearer ${ownerAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o" .',
   });
@@ -130,7 +135,7 @@ Deno.test("Security: Only owner can delete world", async () => {
   const deleteReq1 = new Request(`http://localhost/v1/worlds/${worldId}`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${otherAccount.id}`,
+      "Authorization": `Bearer ${otherAccount.apiKey}`,
     },
   });
 
@@ -147,7 +152,7 @@ Deno.test("Security: Only owner can delete world", async () => {
   const deleteReq2 = new Request(`http://localhost/v1/worlds/${worldId}`, {
     method: "DELETE",
     headers: {
-      "Authorization": `Bearer ${ownerAccount.id}`,
+      "Authorization": `Bearer ${ownerAccount.apiKey}`,
     },
   });
 
@@ -163,6 +168,7 @@ Deno.test("Security: Only owner can delete world", async () => {
 Deno.test("Security: Admin can delete any world", async () => {
   const ownerAccount: Account = {
     id: "security-test-owner-2",
+    apiKey: "sk_test_owner_2",
     description: "Owner account",
     plan: "free_plan",
     accessControl: {
@@ -177,7 +183,7 @@ Deno.test("Security: Admin can delete any world", async () => {
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${ownerAccount.id}`,
+      "Authorization": `Bearer ${ownerAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o" .',
   });
@@ -201,6 +207,7 @@ Deno.test("Security: Admin can delete any world", async () => {
 Deno.test("Security: World update doesn't count against plan limit", async () => {
   const testAccount: Account = {
     id: "security-test-account-3",
+    apiKey: "sk_test_209",
     description: "Test account for update",
     plan: "free_plan",
     accessControl: {
@@ -216,7 +223,7 @@ Deno.test("Security: World update doesn't count against plan limit", async () =>
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${testAccount.id}`,
+      "Authorization": `Bearer ${testAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o1" .',
   });
@@ -229,7 +236,7 @@ Deno.test("Security: World update doesn't count against plan limit", async () =>
     method: "PUT",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${testAccount.id}`,
+      "Authorization": `Bearer ${testAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o2" .',
   });
@@ -246,6 +253,7 @@ Deno.test("Security: World update doesn't count against plan limit", async () =>
 Deno.test("Security: POST creates new world with ownership tracking", async () => {
   const testAccount: Account = {
     id: "security-test-account-4",
+    apiKey: "sk_test_254",
     description: "Test account for POST",
     plan: "free_plan",
     accessControl: {
@@ -259,7 +267,7 @@ Deno.test("Security: POST creates new world with ownership tracking", async () =
     method: "POST",
     headers: {
       "Content-Type": "application/n-quads",
-      "Authorization": `Bearer ${testAccount.id}`,
+      "Authorization": `Bearer ${testAccount.apiKey}`,
     },
     body: '<http://example.com/s> <http://example.com/p> "o" .',
   });
@@ -281,6 +289,7 @@ Deno.test("Security: POST creates new world with ownership tracking", async () =
 Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
   const ownerAccount: Account = {
     id: "security-test-privacy-owner",
+    apiKey: "sk_test_privacy_owner",
     description: "Owner account",
     plan: "free_plan",
     accessControl: { worlds: [] },
@@ -289,6 +298,7 @@ Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
 
   const otherAccount: Account = {
     id: "security-test-privacy-other",
+    apiKey: "sk_test_privacy_other",
     description: "Other account",
     plan: "free_plan",
     accessControl: { worlds: [] },
@@ -303,7 +313,7 @@ Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
       method: "PUT",
       headers: {
         "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${ownerAccount.id}`,
+        "Authorization": `Bearer ${ownerAccount.apiKey}`,
       },
       body: "<http://s> <http://p> <http://o> .",
     }),
@@ -313,7 +323,7 @@ Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
   const getRes = await app.fetch(
     new Request(`http://localhost/v1/worlds/${worldId}`, {
       method: "GET",
-      headers: { "Authorization": `Bearer ${otherAccount.id}` },
+      headers: { "Authorization": `Bearer ${otherAccount.apiKey}` },
     }),
   );
   assertEquals(getRes.status, 404);
@@ -324,7 +334,7 @@ Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
       method: "PUT",
       headers: {
         "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${otherAccount.id}`,
+        "Authorization": `Bearer ${otherAccount.apiKey}`,
       },
       body: "<http://s> <http://p> <http://o2> .",
     }),
@@ -335,6 +345,7 @@ Deno.test("Security: Non-owner gets 404 (Privacy)", async () => {
 Deno.test("Security: Writing to unknown ID claims it (Lazy Claiming)", async () => {
   const testAccount: Account = {
     id: "security-test-lazy-claim",
+    apiKey: "sk_test_lazy",
     description: "Lazy claim account",
     plan: "free_plan",
     accessControl: { worlds: [] },
@@ -349,7 +360,7 @@ Deno.test("Security: Writing to unknown ID claims it (Lazy Claiming)", async () 
       method: "PUT",
       headers: {
         "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testAccount.id}`,
+        "Authorization": `Bearer ${testAccount.apiKey}`,
       },
       body: "<http://s> <http://p> <http://o> .",
     }),

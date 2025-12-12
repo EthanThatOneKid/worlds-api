@@ -13,6 +13,11 @@ export interface AccountsService {
   get(id: string): Promise<Account | null>;
 
   /**
+   * getByApiKey gets an account by its API key.
+   */
+  getByApiKey(apiKey: string): Promise<Account | null>;
+
+  /**
    * remove removes an account.
    */
   remove(id: string): Promise<void>;
@@ -31,6 +36,16 @@ export interface AccountsService {
    * listAccounts retrieves all accounts.
    */
   listAccounts(): Promise<Account[]>;
+
+  /**
+   * addWorldAccess adds a world to an account's access control list atomically.
+   */
+  addWorldAccess(accountId: string, worldId: string): Promise<void>;
+
+  /**
+   * removeWorldAccess removes a world from an account's access control list atomically.
+   */
+  removeWorldAccess(accountId: string, worldId: string): Promise<void>;
 }
 
 /**
@@ -41,6 +56,11 @@ export interface Account {
    * id is the unique ID of the account.
    */
   id: string;
+
+  /**
+   * apiKey is the secret key used to authenticate the account.
+   */
+  apiKey: string;
 
   /**
    * description is a user-defined description of the account.

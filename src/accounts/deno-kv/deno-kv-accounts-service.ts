@@ -30,17 +30,48 @@ export class DenoKvAccountsService implements AccountsService {
     return [...this.prefix, accountId, "usage_summary"];
   }
 
+  private apiKeyKey(apiKey: string): Deno.KvKey {
+    return ["api_keys", apiKey];
+  }
+
   public async get(id: string): Promise<Account | null> {
     const result = await this.kv.get<Account>(this.accountKey(id));
     return result.value;
   }
 
+  public async getByApiKey(apiKey: string): Promise<Account | null> {
+    const accountIdResult = await this.kv.get<string>(this.apiKeyKey(apiKey));
+    if (!accountIdResult.value) {
+      return null;
+    }
+    return await this.get(accountIdResult.value);
+  }
+
   public async set(account: Account): Promise<void> {
-    await this.kv.set(this.accountKey(account.id), account);
+    const primaryKey = this.accountKey(account.id);
+    const secondaryKey = this.apiKeyKey(account.apiKey);
+
+    const atomic = this.kv.atomic()
+      .set(primaryKey, account)
+      .set(secondaryKey, account.id);
+
+    const commitResult = await atomic.commit();
+    if (!commitResult.ok) {
+      throw new Error("Failed to set account");
+    }
   }
 
   public async remove(id: string): Promise<void> {
-    await this.kv.delete(this.accountKey(id));
+    const account = await this.get(id);
+    if (!account) {
+      return;
+    }
+
+    const atomic = this.kv.atomic()
+      .delete(this.accountKey(id))
+      .delete(this.apiKeyKey(account.apiKey));
+
+    await atomic.commit();
   }
 
   public async meter(event: AccountUsageEvent): Promise<void> {
@@ -82,5 +113,67 @@ export class DenoKvAccountsService implements AccountsService {
     }
 
     return accounts;
+  }
+
+  public async addWorldAccess(
+    accountId: string,
+    worldId: string,
+  ): Promise<void> {
+    const key = this.accountKey(accountId);
+    let attempts = 0;
+    while (attempts < 10) {
+      const entry = await this.kv.get<Account>(key);
+      if (!entry.value) {
+        throw new Error("Account not found");
+      }
+      const account = entry.value;
+      if (account.accessControl.worlds.includes(worldId)) {
+        return;
+      }
+
+      account.accessControl.worlds.push(worldId);
+
+      const res = await this.kv.atomic()
+        .check(entry)
+        .set(key, account)
+        .commit();
+
+      if (res.ok) return;
+      attempts++;
+    }
+    throw new Error("Failed to add world access (concurrency limit reached)");
+  }
+
+  public async removeWorldAccess(
+    accountId: string,
+    worldId: string,
+  ): Promise<void> {
+    const key = this.accountKey(accountId);
+    let attempts = 0;
+    while (attempts < 10) {
+      const entry = await this.kv.get<Account>(key);
+      if (!entry.value) {
+        throw new Error("Account not found");
+      }
+      const account = entry.value;
+      if (!account.accessControl.worlds.includes(worldId)) {
+        return;
+      }
+
+      account.accessControl.worlds = account.accessControl.worlds.filter(
+        (id) => id !== worldId,
+      );
+
+      const res = await this.kv.atomic()
+        .check(entry)
+        .set(key, account)
+        .commit();
+
+      if (res.ok) return;
+      attempts++;
+    }
+    throw new Error(
+      "Failed to remove world access (concurrency limit reached)",
+    );
   }
 }

@@ -10,6 +10,7 @@ const app = await createApp(appContext);
 // Create a test account with access to all test worlds
 const testAccount: Account = {
   id: "test-account",
+  apiKey: "sk_test_route_test",
   description: "Test account for route tests",
   plan: "free_plan",
   accessControl: {
@@ -18,7 +19,7 @@ const testAccount: Account = {
 };
 await appContext.accountsService.set(testAccount);
 
-const testApiKey = "test-account";
+const testApiKey = "sk_test_route_test";
 
 const decodableFormats = [
   {

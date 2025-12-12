@@ -13,6 +13,7 @@ const worldId = "test-single-world";
 // Create a test account with access to test world
 const testAccount: Account = {
   id: "test-account-single",
+  apiKey: "sk_test_sdk_single",
   description: "Test account for Single World SDK tests",
   plan: "free_plan",
   accessControl: {
@@ -21,7 +22,7 @@ const testAccount: Account = {
 };
 await appContext.accountsService.set(testAccount);
 
-const testApiKey = "test-account-single";
+const testApiKey = "sk_test_sdk_single";
 
 Deno.test("e2e World (Single)", async (t) => {
   const sdk = new World({
@@ -36,13 +37,13 @@ Deno.test("e2e World (Single)", async (t) => {
     worldId: "non-existent-world-single",
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsApp(appContext).fetch(request);
-  };
+  }) as typeof fetch;
 
   await t.step("get returns null for non-existent world", async () => {
     const world = await missingSdk.get("application/n-quads");
@@ -68,13 +69,13 @@ Deno.test("e2e World (Single)", async (t) => {
     );
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsSparqlApp(appContext).fetch(request);
-  };
+  }) as unknown as typeof fetch;
 
   await t.step("query returns results for existing world", async () => {
     const results = await sdk.query(
@@ -90,13 +91,13 @@ Deno.test("e2e World (Single)", async (t) => {
     );
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsApp(appContext).fetch(request);
-  };
+  }) as typeof fetch;
 
   await t.step("get returns metadata for application/json", async () => {
     const metadataStr = await sdk.get("application/json");

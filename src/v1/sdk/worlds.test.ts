@@ -12,6 +12,7 @@ const appContext = kvAppContext(kv);
 // Create a test account with access to test worlds
 const testAccount: Account = {
   id: "test-account",
+  apiKey: "sk_test_sdk_worlds",
   description: "Test account for SDK tests",
   plan: "free_plan",
   accessControl: {
@@ -20,7 +21,7 @@ const testAccount: Account = {
 };
 await appContext.accountsService.set(testAccount);
 
-const testApiKey = "test-account";
+const testApiKey = "sk_test_sdk_worlds";
 
 Deno.test("e2e Worlds", async (t) => {
   const sdk = new Worlds({
@@ -28,13 +29,13 @@ Deno.test("e2e Worlds", async (t) => {
     apiKey: testApiKey,
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsApp(appContext).fetch(request);
-  };
+  }) as unknown as typeof fetch;
 
   await t.step("getWorld returns null for non-existent world", async () => {
     const world = await sdk.getWorld(
@@ -65,13 +66,13 @@ Deno.test("e2e Worlds", async (t) => {
     );
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsSparqlApp(appContext).fetch(request);
-  };
+  }) as typeof fetch;
 
   await t.step("query returns results for existing world", async () => {
     const results = await sdk.queryWorld(
@@ -89,13 +90,13 @@ Deno.test("e2e Worlds", async (t) => {
     );
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return worldsApp(appContext).fetch(request);
-  };
+  }) as unknown as typeof fetch;
 
   await t.step("getWorld returns metadata for application/json", async () => {
     const metadataStr = await sdk.getWorld("test", "application/json");
@@ -109,13 +110,13 @@ Deno.test("e2e Worlds", async (t) => {
     await sdk.removeWorld("test");
   });
 
-  globalThis.fetch = (
+  globalThis.fetch = ((
     input: RequestInfo | URL,
     init?: RequestInit,
   ): Promise<Response> => {
     const request = new Request(input, init);
     return usageApp(appContext).fetch(request);
-  };
+  }) as unknown as typeof fetch;
 
   await t.step("getUsage returns usage summary", async () => {
     const usage = await sdk.getUsage();

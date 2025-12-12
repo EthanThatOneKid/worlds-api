@@ -80,12 +80,20 @@ export async function decodeStore(
   // We accumulate the stream into a string because Oxigraph.load() is synchronous.
   const reader = textStream.getReader();
   const chunks: string[] = [];
+  let totalSize = 0;
+  const LIMIT = 10 * 1024 * 1024; // 10MB limit
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      if (value) chunks.push(value);
+      if (value) {
+        totalSize += value.length;
+        if (totalSize > LIMIT) {
+          throw new Error("Payload too large");
+        }
+        chunks.push(value);
+      }
     }
   } finally {
     reader.releaseLock();
