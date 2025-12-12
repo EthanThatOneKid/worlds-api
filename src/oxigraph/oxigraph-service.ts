@@ -15,6 +15,7 @@ export interface OxigraphService {
     query: string,
   ): Promise<boolean | Map<string, Term>[] | Quad[] | string>;
   update(id: string, query: string): Promise<void>;
+  updateDescription(id: string, description: string): Promise<void>;
   removeStore(id: string): Promise<void>;
 }
 
@@ -26,6 +27,11 @@ export interface StoreMetadata {
    * id is the store ID.
    */
   id: string;
+
+  /**
+   * description is the description of the store.
+   */
+  description: string;
 
   /**
    * size is the size of the store in bytes.

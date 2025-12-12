@@ -402,5 +402,82 @@ export default ({ oxigraphService, accountsService }: AppContext) => {
 
         return new Response(null, { status: 204 });
       },
+    )
+    .patch(
+      "/v1/worlds/:world",
+      async (ctx) => {
+        const authorized = await authorizeRequest(accountsService, ctx.request);
+
+        if (!authorized) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const worldId = ctx.params?.pathname.groups.world;
+        if (!worldId) {
+          return new Response("World ID required", { status: 400 });
+        }
+
+        // Get world metadata to check ownership
+        const metadata = await oxigraphService.getMetadata(worldId);
+
+        // Privacy check: verify access list first
+        if (
+          !authorized.admin &&
+          !authorized.account?.accessControl.worlds.includes(worldId)
+        ) {
+          return new Response("World not found", { status: 404 });
+        }
+
+        if (!metadata) {
+          return new Response("World not found", { status: 404 });
+        }
+
+        // Only allow update by owner or admin
+        if (!authorized.admin) {
+          if (
+            !authorized.account ||
+            metadata.createdBy !== authorized.account.id
+          ) {
+            return Response.json(
+              {
+                error: "Forbidden: Only the world owner can update this world",
+              },
+              { status: 403 },
+            );
+          }
+        }
+
+        try {
+          const body = await ctx.request.json();
+          if (typeof body.description !== "string") {
+            return Response.json(
+              { error: "Description must be a string" },
+              { status: 400 },
+            );
+          }
+
+          await oxigraphService.updateDescription(worldId, body.description);
+
+          if (authorized.account) {
+            const timestamp = Date.now();
+            const id = ulid(timestamp);
+            await accountsService.meter({
+              id,
+              timestamp,
+              accountId: authorized.account.id,
+              endpoint: "PATCH /worlds/{worldId}",
+              params: { worldId },
+              statusCode: 204,
+            });
+          }
+
+          return new Response(null, { status: 204 });
+        } catch (_) {
+          return Response.json(
+            { error: "Invalid JSON" },
+            { status: 400 },
+          );
+        }
+      },
     );
 };

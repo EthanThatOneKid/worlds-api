@@ -96,3 +96,35 @@ Deno.test("DenoKvOxigraphService preserves ownership on update", async () => {
 
   kv.close();
 });
+
+Deno.test("DenoKvOxigraphService.updateDescription updates description and timestamp", async () => {
+  const kv = await Deno.openKv(":memory:");
+  const service = new DenoKvOxigraphService(kv);
+  const id = "description-test-store";
+  const owner = "desc-owner";
+
+  // Create store
+  const store = new Store();
+  await service.setStore(id, owner, store);
+
+  // Initial check
+  let metadata = await service.getMetadata(id);
+  assert(metadata);
+  assertEquals(metadata.description, undefined);
+  const initialUpdate = metadata.updatedAt;
+
+  // Wait a bit to ensure timestamp changes
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  // Update description
+  await service.updateDescription(id, "New Description");
+
+  // Verify update
+  metadata = await service.getMetadata(id);
+  assert(metadata);
+  assertEquals(metadata.description, "New Description");
+  assert(metadata.updatedAt > initialUpdate);
+  assertEquals(metadata.createdBy, owner);
+
+  kv.close();
+});

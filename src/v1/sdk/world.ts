@@ -62,6 +62,16 @@ export class World {
   }
 
   /**
+   * updateDescription updates the world's description.
+   */
+  public updateDescription(description: string): Promise<void> {
+    return this.worlds.updateWorldDescription(
+      this.options.worldId,
+      description,
+    );
+  }
+
+  /**
    * getUsage retrieves the usage summary for the authenticated account.
    */
   public async getUsage(): Promise<WorldUsageSummary> {

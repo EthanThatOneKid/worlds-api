@@ -106,6 +106,14 @@ Deno.test("e2e Worlds", async (t) => {
     assert(typeof metadata.size === "number");
   });
 
+  await t.step("updateWorldDescription updates the description", async () => {
+    await sdk.updateWorldDescription("test", "A test description");
+    const metadataStr = await sdk.getWorld("test", "application/json");
+    assert(metadataStr !== null);
+    const metadata = JSON.parse(metadataStr!);
+    assert(metadata.description === "A test description");
+  });
+
   await t.step("removeWorld removes the world", async () => {
     await sdk.removeWorld("test");
   });

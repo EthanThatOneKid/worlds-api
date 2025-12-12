@@ -180,6 +180,7 @@ type AccountUsageEventEndpoint =
   | "GET /worlds/{worldId}"
   | "POST /worlds/{worldId}"
   | "PUT /worlds/{worldId}"
+  | "PATCH /worlds/{worldId}"
   | "DELETE /worlds/{worldId}"
   | "GET /worlds/{worldId}/sparql"
   | "POST /worlds/{worldId}/sparql";

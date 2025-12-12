@@ -217,6 +217,31 @@ export class DenoKvOxigraphService implements OxigraphService {
     await this.setStore(id, owner, store);
   }
 
+  public async updateDescription(
+    id: string,
+    description: string,
+  ): Promise<void> {
+    const metadataKey = this.storeMetadataKey(id);
+    const metadataResult = await this.kv.get<StoreMetadata>(metadataKey);
+
+    if (!metadataResult.value) {
+      throw new Error("Store not found");
+    }
+
+    const metadata = metadataResult.value;
+    metadata.description = description;
+    metadata.updatedAt = Date.now();
+
+    const commitResult = await this.kv.atomic()
+      .set(metadataKey, metadata)
+      .check(metadataResult)
+      .commit();
+
+    if (!commitResult.ok) {
+      throw new Error("Failed to update store description");
+    }
+  }
+
   public async removeStore(id: string): Promise<void> {
     await this.kv.atomic()
       .delete(this.storeKey(id))

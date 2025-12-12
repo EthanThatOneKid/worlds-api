@@ -152,6 +152,29 @@ export class Worlds {
   }
 
   /**
+   * updateWorldDescription updates the description of a world.
+   */
+  public async updateWorldDescription(
+    worldId: string,
+    description: string,
+  ): Promise<void> {
+    const response = await fetch(
+      `${this.options.baseUrl}/worlds/${worldId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${this.options.apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ description }),
+      },
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+  }
+
+  /**
    * getUsage retrieves the usage summary for the authenticated account.
    */
   public async getUsage(): Promise<AccountUsageSummary> {

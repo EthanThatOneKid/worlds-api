@@ -106,6 +106,14 @@ Deno.test("e2e World (Single)", async (t) => {
     assert(metadata.id === worldId);
   });
 
+  await t.step("updateDescription updates the description", async () => {
+    await sdk.updateDescription("Single world description");
+    const metadataStr = await sdk.get("application/json");
+    assert(metadataStr !== null);
+    const metadata = JSON.parse(metadataStr!);
+    assert(metadata.description === "Single world description");
+  });
+
   await t.step("getUsage returns usage summary", async () => {
     const usage = await sdk.getUsage();
     assert(typeof usage === "object");
