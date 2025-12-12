@@ -60,6 +60,15 @@ export default ({ accountsService }: AppContext) => {
           );
         }
 
+        // Check if account already exists
+        const existing = await accountsService.get(account.id);
+        if (existing) {
+          return Response.json(
+            { error: "Account already exists" },
+            { status: 409 },
+          );
+        }
+
         // Create account
         await accountsService.set(account);
         return Response.json(account, { status: 201 });

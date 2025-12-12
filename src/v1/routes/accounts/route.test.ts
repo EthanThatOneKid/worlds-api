@@ -218,3 +218,40 @@ Deno.test("PUT /v1/accounts/:accountId returns 400 for ID mismatch", async () =>
   const res = await app.fetch(req);
   assertEquals(res.status, 400);
 });
+
+Deno.test("POST /v1/accounts returns 409 if account already exists", async () => {
+  // First create an account
+  const accountId = "55555555-5555-5555-8555-555555555555";
+  await app.fetch(
+    new Request("http://localhost/v1/accounts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${Deno.env.get("ADMIN_ACCOUNT_ID")}`,
+      },
+      body: JSON.stringify({
+        id: accountId,
+        description: "First account",
+        plan: "free_plan",
+        accessControl: { worlds: [] },
+      }),
+    }),
+  );
+
+  // Try to create it again
+  const req = new Request("http://localhost/v1/accounts", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${Deno.env.get("ADMIN_ACCOUNT_ID")}`,
+    },
+    body: JSON.stringify({
+      id: accountId,
+      description: "Duplicate account",
+      plan: "free_plan",
+      accessControl: { worlds: [] },
+    }),
+  });
+  const res = await app.fetch(req);
+  assertEquals(res.status, 409);
+});
