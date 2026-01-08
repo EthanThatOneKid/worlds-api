@@ -108,7 +108,7 @@ graph LR
     subgraph Edge ["Worlds API™"]
         direction TB
         Guard{Auth Guard}
-        Oxi[("n3<br/><i>Hot Memory</i>")]
+        N3[("n3<br/><i>Hot Memory</i>")]
     end
 
     subgraph Storage ["Database"]
@@ -123,11 +123,11 @@ graph LR
 
     %% Agent/Data Flow
     Agent <==>|HTTPS / SDK| Guard
-    Guard <==>|Authorized| Oxi
+    Guard <==>|Authorized| N3
     
     %% Internal Processing
-    Oxi <-->|Hybrid Search| WorldDB
-    Oxi <-->|Hydrate / Flush| WorldDB
+    N3 <-->|Hybrid Search| WorldDB
+    N3 <-->|Hydrate / Flush| WorldDB
 ```
 
 ### 2.2 Organization
