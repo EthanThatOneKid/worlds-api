@@ -1,89 +1,77 @@
 import { Router } from "@fartlabs/rt";
+import { authorizeRequest } from "#/server/middleware/auth.ts";
 import type { AppContext } from "#/server/app-context.ts";
-import type { Account } from "#/core/accounts/service.ts";
-import { isAccount } from "#/core/accounts/service.ts";
-import { apiKeyPrefix, authorizeRequest } from "#/core/accounts/authorize.ts";
 
-export default (
-  { accountsService, oxigraphService, usageService }: AppContext,
-) => {
-  return new Router()
+export default (appContext: AppContext) =>
+  new Router()
     .get(
       "/v1/accounts",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
           return new Response("Unauthorized", { status: 401 });
         }
+
         if (!authorized.admin) {
           return new Response("Forbidden: Admin access required", {
             status: 403,
           });
         }
 
-        const accounts = await accountsService.listAccounts();
-        return Response.json(accounts);
+        const url = new URL(ctx.request.url);
+        const pageString = url.searchParams.get("page") ?? "1";
+        const pageSizeString = url.searchParams.get("pageSize") ?? "20";
+        const page = parseInt(pageString);
+        const pageSize = parseInt(pageSizeString);
+        const offset = (page - 1) * pageSize;
+        const { result } = await appContext.db.accounts.getMany({
+          limit: pageSize,
+          offset: offset,
+        });
+
+        return Response.json(result.map(({ value }) => value));
       },
     )
     .post(
       "/v1/accounts",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
           return new Response("Unauthorized", { status: 401 });
         }
+
         if (!authorized.admin) {
           return new Response("Forbidden: Admin access required", {
             status: 403,
           });
         }
 
-        // Parse request body
-        let account: Account;
-        try {
-          account = await ctx.request.json();
-        } catch {
-          return Response.json({ error: "Invalid JSON" }, { status: 400 });
+        const body = await ctx.request.json();
+        const apiKey = crypto.randomUUID();
+        const timestamp = Date.now();
+        const result = await appContext.db.accounts.add({
+          description: body.description,
+          planType: body.planType,
+          apiKey: apiKey,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+          deletedAt: null,
+        });
+        if (!result.ok) {
+          return new Response("Failed to create account", { status: 500 });
         }
 
-        // Generate a cryptographically secure API key
-        const apiKey = `${apiKeyPrefix}${
-          crypto.randomUUID().replace(/-/g, "")
-        }`;
-        account.apiKey = apiKey;
-
-        // Validate account
-        if (!isAccount(account)) {
-          return Response.json(
-            {
-              error:
-                "Invalid account fields. Required: id, description, plan, accessControl",
-            },
-            { status: 400 },
-          );
-        }
-
-        // Check if account already exists
-        const existing = await accountsService.get(account.id);
-        if (existing) {
-          return Response.json(
-            { error: "Account already exists" },
-            { status: 409 },
-          );
-        }
-
-        // Create account
-        await accountsService.set(account);
-        return Response.json(account, { status: 201 });
+        return Response.json(null, { status: 201 });
       },
     )
     .get(
       "/v1/accounts/:account",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
           return new Response("Unauthorized", { status: 401 });
         }
+
         if (!authorized.admin) {
           return new Response("Forbidden: Admin access required", {
             status: 403,
@@ -95,56 +83,22 @@ export default (
           return new Response("Account ID required", { status: 400 });
         }
 
-        const account = await accountsService.get(accountId);
-        if (!account) {
+        const result = await appContext.db.accounts.find(accountId);
+        if (!result) {
           return new Response("Account not found", { status: 404 });
         }
 
-        return Response.json(account);
-      },
-    )
-    .get(
-      "/v1/accounts/:account/worlds",
-      async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        if (!authorized.admin) {
-          return new Response("Forbidden: Admin access required", {
-            status: 403,
-          });
-        }
-
-        const accountId = ctx.params?.pathname.groups.account;
-        if (!accountId) {
-          return new Response("Account ID required", { status: 400 });
-        }
-
-        const account = await accountsService.get(accountId);
-        if (!account) {
-          return new Response("Account not found", { status: 404 });
-        }
-
-        const metadata = await oxigraphService.getManyMetadata(
-          account.accessControl.worlds,
-        );
-
-        // Return list of most recent world metadata.
-        return Response.json(
-          metadata
-            .filter((world) => world !== null)
-            .toSorted((a, b) => b.updatedAt - a.updatedAt),
-        );
+        return Response.json(result.value);
       },
     )
     .put(
       "/v1/accounts/:account",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
           return new Response("Unauthorized", { status: 401 });
         }
+
         if (!authorized.admin) {
           return new Response("Forbidden: Admin access required", {
             status: 403,
@@ -156,89 +110,48 @@ export default (
           return new Response("Account ID required", { status: 400 });
         }
 
-        // Parse request body
-        let account: Account;
-        try {
-          account = await ctx.request.json();
-        } catch {
-          return Response.json({ error: "Invalid JSON" }, { status: 400 });
+        const body = await ctx.request.json();
+        const result = await appContext.db.accounts.update(accountId, {
+          description: body.description,
+          planType: body.planType,
+          updatedAt: Date.now(),
+        });
+        if (!result.ok) {
+          return new Response("Failed to update account", { status: 500 });
         }
 
-        // Ensure ID matches
-        if (account.id !== accountId) {
-          return Response.json(
-            { error: "Account ID mismatch" },
-            { status: 400 },
-          );
+        return new Response(null, { status: 204 });
+      },
+    )
+    .delete(
+      "/v1/accounts/:account",
+      async (ctx) => {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
+          return new Response("Unauthorized", { status: 401 });
         }
 
-        // Validate account
-        if (!isAccount(account)) {
-          return Response.json(
-            {
-              error:
-                "Invalid account fields. Required: id, description, plan, accessControl",
-            },
-            { status: 400 },
-          );
+        if (!authorized.admin) {
+          return new Response("Forbidden: Admin access required", {
+            status: 403,
+          });
         }
 
-        // Update account
-        await accountsService.set(account);
+        const accountId = ctx.params?.pathname.groups.account;
+        if (!accountId) {
+          return new Response("Account ID required", { status: 400 });
+        }
+
+        await appContext.db.accounts.delete(accountId);
         return new Response(null, { status: 204 });
       },
     )
     .post(
       "/v1/accounts/:account/rotate",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
           return new Response("Unauthorized", { status: 401 });
-        }
-        // Design doc says: "service-owner contexts". Usually rotating keys is something the user can do for themselves or admin.
-        // Assuming admin or same user.
-        const accountId = ctx.params?.pathname.groups.account;
-        if (!accountId) {
-          return new Response("Account ID required", { status: 400 });
-        }
-
-        if (authorized.admin) {
-          // Admin can rotate anyone
-        } else if (authorized.account) {
-          if (authorized.account.id !== accountId) {
-            return new Response("Forbidden", { status: 403 });
-          }
-        } else {
-          return new Response("Forbidden", { status: 403 });
-        }
-
-        const account = await accountsService.get(accountId);
-        if (!account) {
-          return new Response("Account not found", { status: 404 });
-        }
-
-        // Generate new key
-        const newApiKey = `${apiKeyPrefix}${
-          crypto.randomUUID().replace(/-/g, "")
-        }`;
-        account.apiKey = newApiKey;
-
-        await accountsService.set(account);
-
-        return Response.json(account);
-      },
-    )
-    .delete(
-      "/v1/accounts/:account",
-      async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-        if (!authorized) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-        if (!authorized.admin) {
-          return new Response("Forbidden: Admin access required", {
-            status: 403,
-          });
         }
 
         const accountId = ctx.params?.pathname.groups.account;
@@ -246,39 +159,15 @@ export default (
           return new Response("Account ID required", { status: 400 });
         }
 
-        await accountsService.remove(accountId);
+        const apiKey = crypto.randomUUID();
+        const result = await appContext.db.accounts.update(accountId, {
+          apiKey,
+          updatedAt: Date.now(),
+        });
+        if (!result.ok) {
+          return new Response("Failed to rotate account key", { status: 500 });
+        }
+
         return new Response(null, { status: 204 });
       },
-    )
-    .get(
-      "/v1/accounts/:account/usage",
-      async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-
-        if (!authorized) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-
-        const accountId = ctx.params?.pathname.groups.account;
-        if (!accountId) {
-          return new Response("Account ID required", { status: 400 });
-        }
-
-        // Access Control
-        if (authorized.admin) {
-          // Admin can view any usage
-        } else if (authorized.account) {
-          // Users can only view their own usage
-          if (authorized.account.id !== accountId) {
-            return new Response("Forbidden", { status: 403 });
-          }
-        } else {
-          return new Response("Forbidden", { status: 403 });
-        }
-
-        const usage = await usageService.getUsage(accountId);
-
-        return Response.json(usage);
-      },
     );
-};

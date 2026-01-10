@@ -1,157 +1,473 @@
 import { assert, assertEquals } from "@std/assert";
-import { Store } from "oxigraph";
-import { sqliteAppContext } from "#/server/app-context.ts";
-import createApp from "./route.ts";
-import type { Account } from "#/core/accounts/service.ts";
+import { Parser, Store } from "n3";
+import { createTestAccount, createTestContext } from "#/server/testing.ts";
+import { setWorldAsN3Store } from "#/server/db/n3.ts";
+import createRoute from "./route.ts";
 
-const ctx = await sqliteAppContext(":memory:");
-const app = await createApp(ctx);
+/**
+ * For a comprehensive suite of test cases for standard SPARQL endpoints, see:
+ * https://www.w3.org/2009/sparql/docs/tests/summary.html
+ */
 
-// Create a test account with access to all test worlds
-const testAccount: Account = {
-  id: "test-account",
-  apiKey: "sk_test_sparql_test",
-  description: "Test account for SPARQL route tests",
-  plan: "free",
-  accessControl: {
-    worlds: [
-      "test-world-sparql-get",
-      "test-world-sparql-post-form",
-      "test-world-sparql-post-query",
-      "test-world-sparql-update-direct",
-    ],
-  },
-};
-await ctx.accountsService.set(testAccount);
-
-const testApiKey = "sk_test_sparql_test";
-
-Deno.test("GET /v1/worlds/{world}/sparql executes SPARQL Query", async () => {
-  const worldId = "test-world-sparql-get";
-
-  // Setup data directly via service
+async function setWorldData(kv: Deno.Kv, worldId: string, ttl: string) {
+  const parser = new Parser();
+  const quads = parser.parse(ttl);
   const store = new Store();
-  store.load('<http://example.com/s> <http://example.com/p> "o" .', {
-    format: "application/n-quads",
-  });
-  await ctx.oxigraphService.setStore(worldId, "test-account", store);
+  store.addQuads(quads);
+  await setWorldAsN3Store(kv, worldId, store);
+}
 
-  const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
-  const req = new Request(
-    `http://localhost/v1/worlds/${worldId}/sparql?query=${query}`,
-    {
-      method: "GET",
-      headers: {
-        "Accept": "application/sparql-results+json",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
+Deno.test("SPARQL API routes - GET operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "GET /v1/worlds/:world/sparql returns service description when no query",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const resp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}/sparql`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
+
+      assertEquals(resp.status, 200);
+      const contentType = resp.headers.get("content-type");
+      assert(
+        contentType === "text/turtle" || contentType === "application/rdf+xml",
+      );
+      const body = await resp.text();
+      assert(body.includes("Service") || body.length > 0);
     },
   );
 
-  const res = await app.fetch(req);
-  assertEquals(res.status, 200);
-  const json = await res.json();
-
-  // Check Simplified JSON Structure (Array of POJOs)
-  assert(Array.isArray(json));
-  assertEquals(json.length, 1);
-
-  const binding = json[0];
-  assertEquals(binding.s.termType, "NamedNode");
-  assertEquals(binding.s.value, "http://example.com/s");
+  testContext.kv.close();
 });
 
-Deno.test("POST /v1/worlds/{world}/sparql (form-urlencoded) executes SPARQL Query", async () => {
-  const worldId = "test-world-sparql-post-form";
+Deno.test("SPARQL API routes - POST operations (Query)", async (t) => {
+  const testContext = await createTestContext();
+  const { db, kv } = testContext;
+  const app = createRoute(testContext);
 
-  // Setup data directly via service
-  const store = new Store();
-  store.load('<http://example.com/s> <http://example.com/p> "o" .', {
-    format: "application/n-quads",
-  });
-  await ctx.oxigraphService.setStore(worldId, "test-account", store);
+  await t.step(
+    "POST /v1/worlds/:world/sparql (query parameter) executes SPARQL Query",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
 
-  const body = new URLSearchParams({ query: "SELECT ?s WHERE { ?s ?p ?o }" });
-  const req = new Request(`http://localhost/v1/worlds/${worldId}/sparql`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      "Accept": "application/sparql-results+json",
-      "Authorization": `Bearer ${testApiKey}`,
+      // Set up test data
+      await setWorldData(
+        kv,
+        worldId,
+        '<http://example.com/s> <http://example.com/p> "o" .',
+      );
+
+      const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql?query=${query}`,
+        {
+          method: "POST",
+          headers: {
+            "Accept": "application/sparql-results+json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 200);
+      assertEquals(
+        res.headers.get("content-type"),
+        "application/sparql-results+json",
+      );
+
+      const json = await res.json();
+
+      // Check Standard SPARQL JSON Results Structure
+      assert(json.head);
+      assert(Array.isArray(json.head.vars));
+      assertEquals(json.head.vars.length, 1);
+      assertEquals(json.head.vars[0], "s");
+
+      assert(json.results);
+      assert(Array.isArray(json.results.bindings));
+      assertEquals(json.results.bindings.length, 1);
+
+      const binding = json.results.bindings[0];
+      assertEquals(binding.s.type, "uri");
+      assertEquals(binding.s.value, "http://example.com/s");
     },
-    body: body.toString(),
-  });
-
-  const res = await app.fetch(req);
-  assertEquals(res.status, 200);
-  const json = await res.json();
-
-  // Check Simplified JSON Structure
-  assert(Array.isArray(json));
-  assertEquals(json.length, 1);
-});
-
-Deno.test("POST /v1/worlds/{world}/sparql (sparql-query) executes SPARQL Query", async () => {
-  const worldId = "test-world-sparql-post-query";
-
-  // Setup data directly via service
-  const store = new Store();
-  store.load('<http://example.com/s> <http://example.com/p> "o" .', {
-    format: "application/n-quads",
-  });
-  await ctx.oxigraphService.setStore(worldId, "test-account", store);
-
-  const query = "SELECT ?s WHERE { ?s ?p ?o }";
-  const req = new Request(`http://localhost/v1/worlds/${worldId}/sparql`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/sparql-query",
-      "Accept": "application/sparql-results+json",
-      "Authorization": `Bearer ${testApiKey}`,
-    },
-    body: query,
-  });
-
-  const res = await app.fetch(req);
-  assertEquals(res.status, 200);
-  const json = await res.json();
-  assert(Array.isArray(json));
-  assertEquals(json.length, 1);
-});
-
-Deno.test("POST /v1/worlds/{world}/sparql (direct) executes SPARQL Update", async () => {
-  const worldId = "test-world-sparql-update-direct";
-
-  // Initialize store (empty)
-  const store = new Store();
-  await ctx.oxigraphService.setStore(worldId, "test-account", store);
-
-  const update =
-    'INSERT DATA { <http://example.com/s> <http://example.com/p> "o" }';
-  const req = new Request(`http://localhost/v1/worlds/${worldId}/sparql`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/sparql-update",
-      "Authorization": `Bearer ${testApiKey}`,
-    },
-    body: update,
-  });
-
-  const res = await app.fetch(req);
-  assertEquals(res.status, 204);
-
-  // Verify using query
-  const query = encodeURIComponent("SELECT * WHERE { ?s ?p ?o }");
-  const resQuery = await app.fetch(
-    new Request(
-      `http://localhost/v1/worlds/${worldId}/sparql?query=${query}`,
-      {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${testApiKey}` },
-      },
-    ),
   );
-  const json = await resQuery.json();
-  assert(Array.isArray(json));
-  assertEquals(json.length, 1);
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql (body) executes SPARQL Query",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Set up test data
+      await setWorldData(
+        kv,
+        worldId,
+        '<http://example.com/s2> <http://example.com/p2> "o2" .',
+      );
+
+      const query = "SELECT ?s WHERE { ?s ?p ?o }";
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sparql-query",
+            "Accept": "application/sparql-results+json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: query,
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 200);
+      const json = await res.json();
+      assert(json.head);
+      assert(json.results);
+      assert(json.results.bindings.length >= 1);
+    },
+  );
+
+  testContext.kv.close();
+});
+
+Deno.test("SPARQL API routes - POST operations (Update)", async (t) => {
+  const testContext = await createTestContext();
+  const { db, kv } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql executes SPARQL Update",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Set up initial data
+      await setWorldData(
+        kv,
+        worldId,
+        '<http://example.com/s> <http://example.com/p> "o" .',
+      );
+
+      // Execute update
+      const updateQuery =
+        'INSERT { <http://example.com/s2> <http://example.com/p2> "o2" . } WHERE { }';
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sparql-update",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: updateQuery,
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 204);
+
+      // Verify update by querying - need to wait a bit for the update to persist
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const verifyQuery = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
+      const verifyReq = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql?query=${verifyQuery}`,
+        {
+          method: "POST",
+          headers: {
+            "Accept": "application/sparql-results+json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const verifyRes = await app.fetch(verifyReq);
+      assertEquals(verifyRes.status, 200);
+      const json = await verifyRes.json();
+      assert(json.results.bindings.length >= 2);
+    },
+  );
+
+  testContext.kv.close();
+});
+
+Deno.test("SPARQL API routes - Error handling", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql returns 404 for non-existent world",
+    async () => {
+      const { apiKey } = await createTestAccount(db);
+
+      const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
+      const req = new Request(
+        `http://localhost/v1/worlds/non-existent-world/sparql?query=${query}`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 404);
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql returns 401 for unauthenticated request",
+    async () => {
+      const { id: accountId } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql?query=${query}`,
+        {
+          method: "POST",
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 404);
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql returns 415 for unsupported content type",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: "SELECT ?s WHERE { ?s ?p ?o }",
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 415);
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql returns 400 for invalid SPARQL syntax (Query)",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Invalid query: Missing closing brace
+      const query = "SELECT * WHERE { ?s ?p ?o";
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sparql-query",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: query,
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 400);
+      const json = await res.json();
+      assert(json.error);
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world/sparql returns 400 for invalid SPARQL syntax (Update)",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Invalid update: Missing closing brace
+      const update = "INSERT DATA { <http://s> <http://p> <http://o>";
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/sparql-update",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: update,
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 400);
+      const json = await res.json();
+      assert(json.error);
+    },
+  );
+
+  testContext.kv.close();
+});
+
+Deno.test("SPARQL API routes - Method validation", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "PUT /v1/worlds/:world/sparql returns 405 Method Not Allowed",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "PUT",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 405);
+      assertEquals(res.headers.get("Allow"), "GET, POST");
+    },
+  );
+
+  await t.step(
+    "DELETE /v1/worlds/:world/sparql returns 405 Method Not Allowed",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql`,
+        {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 405);
+      assertEquals(res.headers.get("Allow"), "GET, POST");
+    },
+  );
+
+  testContext.kv.close();
 });

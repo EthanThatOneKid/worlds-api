@@ -1,266 +1,323 @@
 import { assert, assertEquals } from "@std/assert";
-import { sqliteAppContext } from "#/server/app-context.ts";
-import createApp from "./route.ts";
-import type { Account } from "#/core/accounts/service.ts";
+import { createTestAccount, createTestContext } from "#/server/testing.ts";
+import createRoute from "./route.ts";
 
-const appContext = await sqliteAppContext(":memory:");
-const app = await createApp(appContext);
+Deno.test("Worlds API routes - GET operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
 
-// Create a test account with access to all test worlds
-const testAccount: Account = {
-  id: "test-account",
-  apiKey: "sk_test_route_test",
-  description: "Test account for route tests",
-  plan: "free",
-  accessControl: {
-    worlds: [], // Worlds will be automatically added on creation
-  },
-};
-await appContext.accountsService.set(testAccount);
-
-const testApiKey = "sk_test_route_test";
-
-const decodableFormats = [
-  {
-    mime: "application/n-quads",
-    data: '<http://example.com/s> <http://example.com/p> "o" .',
-  },
-  {
-    mime: "application/ld+json",
-    data: JSON.stringify([
-      {
-        "@id": "http://example.com/s",
-        "http://example.com/p": [{ "@value": "o" }],
-      },
-    ]),
-  },
-  {
-    mime: "application/trig",
-    data: '<http://example.com/s> <http://example.com/p> "o" .',
-  },
-];
-
-for (const { mime, data } of decodableFormats) {
-  Deno.test(`PUT /v1/worlds/{world} accepts ${mime}`, async () => {
-    const worldId = `test-world-put-${mime.replace(/[^a-z0-9]/g, "-")}`;
-
-    const req = new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": mime,
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: data,
+  await t.step("GET /v1/worlds/:world returns world metadata", async () => {
+    const { id: accountId, apiKey } = await createTestAccount(db);
+    const result = await db.worlds.add({
+      accountId,
+      name: "Test World",
+      description: "Test Description",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
     });
-    const res = await app.fetch(req);
-    if (res.status !== 204) {
-      console.log(`PUT ${mime} failed:`, res.status, await res.text());
-    }
-    assertEquals(res.status, 204);
+    assert(result.ok);
+    const worldId = result.id;
 
-    // Verify content
-    const resGet = await app.fetch(
+    const resp = await app.fetch(
       new Request(`http://localhost/v1/worlds/${worldId}`, {
         method: "GET",
         headers: {
-          "Accept": "application/n-quads",
-          "Authorization": `Bearer ${testApiKey}`,
+          "Authorization": `Bearer ${apiKey}`,
         },
       }),
     );
-    assertEquals(resGet.status, 200);
-    const body = await resGet.text();
-    // console.log("GET Body:", body);
-    assertEquals(body.includes("http://example.com/s"), true);
+
+    assertEquals(resp.status, 200);
+    assertEquals(resp.headers.get("content-type"), "application/json");
+
+    const world = await resp.json();
+    assertEquals(world.accountId, accountId);
+    assertEquals(world.name, "Test World");
+    assert(typeof world.createdAt === "number");
+    assert(typeof world.updatedAt === "number");
+    assertEquals(world.deletedAt, null);
+    assertEquals(world.isPublic, false);
   });
-}
 
-const encodableFormats = [
-  "application/ld+json",
-  "application/n-quads",
-  "application/trig",
-];
+  await t.step(
+    "GET /v1/worlds/:world returns 404 for non-existent world",
+    async () => {
+      const { apiKey } = await createTestAccount(db);
 
-Deno.test("GET /v1/worlds/{world} negotiates content negotiation", async (t) => {
-  const worldId = "test-world-conneg";
+      const resp = await app.fetch(
+        new Request("http://localhost/v1/worlds/non-existent-world", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
 
-  // Setup data
-  await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: '<http://example.com/s> <http://example.com/p> "o" .',
-    }),
+      assertEquals(resp.status, 404);
+    },
   );
 
-  for (const mime of encodableFormats) {
-    await t.step(`Accept: ${mime}`, async () => {
+  await t.step(
+    "GET /v1/worlds/:world returns 404 for deleted world",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Mark world as deleted
+      await db.worlds.update(worldId, { deletedAt: Date.now() });
+
       const resp = await app.fetch(
         new Request(`http://localhost/v1/worlds/${worldId}`, {
           method: "GET",
           headers: {
-            "Accept": mime,
-            "Authorization": `Bearer ${testApiKey}`,
+            "Authorization": `Bearer ${apiKey}`,
           },
         }),
       );
-      assertEquals(resp.status, 200);
-      assertEquals(resp.headers.get("content-type"), mime);
-      const text = await resp.text();
-      assert(text.length > 0);
+
+      assertEquals(resp.status, 404);
+    },
+  );
+
+  testContext.kv.close();
+});
+
+Deno.test("Worlds API routes - POST operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "POST /v1/worlds/:world updates world description",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Update description
+      const updateResp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ description: "Updated description" }),
+        }),
+      );
+      assertEquals(updateResp.status, 204);
+
+      // Verify update
+      const getResp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
+      assertEquals(getResp.status, 200);
+      const world = await getResp.json();
+      assertEquals(world.description, "Updated description");
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world returns 400 for invalid JSON",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const invalidJsonResp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: "invalid-json",
+        }),
+      );
+      assertEquals(invalidJsonResp.status, 400);
+    },
+  );
+
+  await t.step(
+    "POST /v1/worlds/:world returns 404 for non-existent world",
+    async () => {
+      const { apiKey } = await createTestAccount(db);
+
+      const updateResp = await app.fetch(
+        new Request("http://localhost/v1/worlds/non-existent-world", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({ description: "Test" }),
+        }),
+      );
+      assertEquals(updateResp.status, 404);
+    },
+  );
+
+  testContext.kv.close();
+});
+
+Deno.test("Worlds API routes - DELETE operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step("DELETE /v1/worlds/:world deletes a world", async () => {
+    const { id: accountId, apiKey } = await createTestAccount(db);
+    const result = await db.worlds.add({
+      accountId,
+      name: "Test World",
+      description: "Test Description",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
     });
-  }
+    assert(result.ok);
+    const worldId = result.id;
+
+    // Delete world
+    const deleteResp = await app.fetch(
+      new Request(`http://localhost/v1/worlds/${worldId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+        },
+      }),
+    );
+    assertEquals(deleteResp.status, 204);
+
+    // Verify deletion - should return 404
+    const getResp = await app.fetch(
+      new Request(`http://localhost/v1/worlds/${worldId}`, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+        },
+      }),
+    );
+    assertEquals(getResp.status, 404);
+  });
+
+  await t.step(
+    "DELETE /v1/worlds/:world returns 404 for non-existent world",
+    async () => {
+      const { apiKey } = await createTestAccount(db);
+
+      const deleteResp = await app.fetch(
+        new Request("http://localhost/v1/worlds/non-existent-world", {
+          method: "DELETE",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
+      assertEquals(deleteResp.status, 404);
+    },
+  );
+
+  testContext.kv.close();
 });
 
-Deno.test("GET /v1/worlds/{world} returns metadata for application/json", async () => {
-  const worldId = "test-world-metadata";
+Deno.test("Worlds API routes - List operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
 
-  // Create world
-  await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: '<http://example.com/s> <http://example.com/p> "o" .',
-    }),
+  await t.step(
+    "GET /v1/worlds returns paginated list of worlds for account",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+
+      const result1 = await db.worlds.add({
+        accountId,
+        name: "Test World 1",
+        description: "Test Description 1",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result1.ok);
+
+      const result2 = await db.worlds.add({
+        accountId,
+        name: "Test World 2",
+        description: "Test Description 2",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result2.ok);
+
+      const resp = await app.fetch(
+        new Request("http://localhost/v1/worlds?page=1&pageSize=20", {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
+
+      assertEquals(resp.status, 200);
+      const worlds = await resp.json();
+      assert(Array.isArray(worlds));
+      assert(worlds.length >= 2);
+
+      // Verify worlds belong to test account
+      // Note: we can't search by worldId directly in the name since names are "Test World 1", but IDs are UUIDs.
+      // The original test checked names.
+      const worldNames = worlds.map((w: { name: string }) => w.name);
+      assert(worldNames.includes("Test World 1"));
+      assert(worldNames.includes("Test World 2"));
+    },
   );
 
-  // GET with application/json
-  const resp = await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-    }),
+  await t.step(
+    "GET /v1/worlds returns 401 for unauthenticated request",
+    async () => {
+      const resp = await app.fetch(
+        new Request("http://localhost/v1/worlds", {
+          method: "GET",
+        }),
+      );
+
+      assertEquals(resp.status, 401);
+    },
   );
 
-  assertEquals(resp.status, 200);
-  assertEquals(resp.headers.get("content-type"), "application/json");
-
-  const metadata = await resp.json();
-  assertEquals(metadata.id, worldId);
-  assert(metadata.createdAt > 0);
-  assert(metadata.updatedAt > 0);
-  assertEquals(metadata.createdBy, testAccount.id);
-  assertEquals(typeof metadata.size, "number");
-  assertEquals(typeof metadata.tripleCount, "number");
-});
-
-Deno.test("GET /v1/worlds/{world}/usage returns usage for specific world", async () => {
-  const worldId = "test-world-usage-specific";
-
-  // Create world
-  await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: '<http://example.com/s> <http://example.com/p> "o" .',
-    }),
-  );
-
-  // GET usage
-  const resp = await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}/usage`, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-    }),
-  );
-
-  assertEquals(resp.status, 200);
-  const usage = await resp.json();
-  assert(Array.isArray(usage));
-  // We can't guarantee exact request count due to test parallelism/setup, but we should find *some* usage
-  // The route returns filtered usage for this world.
-  assert(usage.length > 0);
-  assert(usage.some((u: { endpoint: string }) => u.endpoint.includes(worldId)));
-});
-
-Deno.test("PATCH /v1/worlds/{world} updates description", async () => {
-  const worldId = "test-world-patch-desc";
-
-  // Create world
-  await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: '<http://example.com/s> <http://example.com/p> "o" .',
-    }),
-  );
-
-  // Update description
-  const updateResp = await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: JSON.stringify({ description: "Updated description" }),
-    }),
-  );
-  assertEquals(updateResp.status, 204);
-
-  // Verify update
-  const getResp = await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-    }),
-  );
-  assertEquals(getResp.status, 200);
-  const metadata = await getResp.json();
-  assertEquals(metadata.description, "Updated description");
-});
-
-Deno.test("PATCH /v1/worlds/{world} enforces ownership", async () => {
-  const worldId = "test-world-patch-auth";
-  // const otherApiKey = "sk_other_user"; // Attempting to use a different key
-
-  // Create world with main user
-  await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/n-quads",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: '<http://example.com/s> <http://example.com/p> "o" .',
-    }),
-  );
-
-  // Try to update with unauthenticated/other user (simulated by using main key for now,
-  // but ideally we'd need another account setup.
-  // Since we don't have easy multi-account setup in this snippet,
-  // we'll test untracked/random token which should fail 401 or 404 if not found).
-
-  // Actually, let's test invalid JSON first which is easier
-  const invalidJsonResp = await app.fetch(
-    new Request(`http://localhost/v1/worlds/${worldId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${testApiKey}`,
-      },
-      body: "invalid-json",
-    }),
-  );
-  assertEquals(invalidJsonResp.status, 400);
+  testContext.kv.close();
 });

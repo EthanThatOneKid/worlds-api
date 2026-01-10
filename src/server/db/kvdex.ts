@@ -1,11 +1,83 @@
-// TODO: Implement kvdex for the Worlds API system.
-// https://github.com/oliver-oloughlin/kvdex?tab=readme-ov-file#collection-options
-//
+import { collection, kvdex } from "@olli/kvdex";
+import { z } from "zod";
 
-// import { collection, kvdex, model } from "@olli/kvdex";
+/**
+ * WorldsKvdex is the type of the kvdex for the Worlds API.
+ */
+export type WorldsKvdex = ReturnType<typeof worldsKvdex>;
 
-// export const kv = await Deno.openKv();
+/**
+ * worldsKvdex returns the kvdex instance for the Worlds API.
+ *
+ * @see https://github.com/oliver-oloughlin/kvdex
+ */
+export function worldsKvdex(kv: Deno.Kv) {
+  return kvdex({
+    kv: kv,
+    schema: {
+      accounts: collection(accountSchema, {
+        indices: {
+          apiKey: "secondary",
+        },
+      }),
+      usageBuckets: collection(usageBucketSchema, {
+        indices: {
+          accountId: "secondary",
+          worldId: "secondary",
+        },
+      }),
+      plans: collection(planSchema, {
+        idGenerator: (plan) => plan.planType,
+      }),
+      worlds: collection(worldSchema, {
+        indices: {
+          accountId: "secondary",
+        },
+      }),
+    },
+  });
+}
 
-// export const db = kvdex({
-//   kv: kv,
-// });
+export type PlanType = z.infer<typeof planTypeSchema>;
+
+export const planTypeSchema = z.enum(["free", "pro"]).default("free");
+
+export type Plan = z.infer<typeof planSchema>;
+
+export const planSchema = z.object({
+  planType: planTypeSchema,
+  quotaRequestsPerMin: z.number().default(60),
+  quotaStorageBytes: z.number().default(104857600),
+});
+
+export type Account = z.infer<typeof accountSchema>;
+
+export const accountSchema = z.object({
+  description: z.string().nullable(),
+  planType: planTypeSchema,
+  apiKey: z.string(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  deletedAt: z.number().nullable(),
+});
+
+export type World = z.infer<typeof worldSchema>;
+
+export const worldSchema = z.object({
+  accountId: z.string(),
+  name: z.string(),
+  description: z.string().nullable(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  deletedAt: z.number().nullable(),
+  isPublic: z.boolean().default(false),
+});
+
+export type UsageBucket = z.infer<typeof usageBucketSchema>;
+
+export const usageBucketSchema = z.object({
+  accountId: z.string(),
+  worldId: z.string(),
+  bucketStartTs: z.number(),
+  requestCount: z.number().default(0),
+});

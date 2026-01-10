@@ -1,374 +1,386 @@
-import type { WorldMetadata } from "#/core/worlds/service.ts";
-import { Store } from "oxigraph";
 import { assert, assertEquals } from "@std/assert";
-import { sqliteAppContext } from "#/server/app-context.ts";
+import { createTestContext } from "#/server/testing.ts";
 import createApp from "./route.ts";
-import type { Account } from "#/core/accounts/service.ts";
 
-const appContext = await sqliteAppContext(":memory:");
-const app = await createApp(appContext);
+Deno.test("Accounts API routes", async (t) => {
+  const testContext = await createTestContext();
+  const app = createApp(testContext);
 
-Deno.env.set("ADMIN_API_KEY", "admin-secret-token");
-// ...
-// ... around line 315
-Deno.test("GET /v1/accounts/:account/worlds returns 400 if accountId invalid", async () => {
-  // Only need app, no kv setup needed for this simple validation test
-  const req = new Request(
-    "http://localhost/v1/accounts/invalid-account-id/worlds",
-    {
-      headers: { "Authorization": "Bearer admin-secret-token" },
-    },
-  );
-  const res = await app.fetch(req);
-  await res.body?.cancel();
-  assertEquals(res.status, 404);
-});
+  await t.step(
+    "GET /v1/accounts returns paginated list of accounts",
+    async () => {
+      const account1 = await testContext.db.accounts.add({
+        description: "Test account 1",
+        planType: "free",
+        apiKey: crypto.randomUUID(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
 
-const testAccount: Account = {
-  id: "11111111-1111-4111-8111-111111111111",
-  apiKey: "sk_test_account_1",
-  description: "Test account",
-  plan: "free",
-  accessControl: {
-    worlds: ["store-1", "store-2"],
-  },
-};
-
-Deno.test("POST /v1/accounts creates a new account", async () => {
-  const req = new Request("http://localhost/v1/accounts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-    },
-    body: JSON.stringify(testAccount),
-  });
-  const res = await app.fetch(req);
-  assertEquals(res.status, 201);
-
-  const created = await res.json();
-  assertEquals(created.id, "11111111-1111-4111-8111-111111111111");
-  assertEquals(created.description, "Test account");
-  assertEquals(created.plan, "free");
-  assertEquals(created.apiKey.startsWith("sk_worlds_"), true);
-});
-
-Deno.test("GET /v1/accounts/:account retrieves an account", async () => {
-  // First create an account
-  await app.fetch(
-    new Request("http://localhost/v1/accounts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        id: "22222222-2222-4222-8222-222222222222",
+      const account2 = await testContext.db.accounts.add({
         description: "Test account 2",
-        plan: "pro",
-        accessControl: { worlds: [] },
-      }),
-    }),
-  );
+        planType: "pro",
+        apiKey: crypto.randomUUID(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
 
-  // Then retrieve it
-  const req = new Request(
-    "http://localhost/v1/accounts/22222222-2222-4222-8222-222222222222",
-    {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
+      if (!account1.ok || !account2.ok) {
+        throw new Error("Failed to create test accounts");
+      }
+
+      const req = new Request(
+        "http://localhost/v1/accounts?page=1&pageSize=20",
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+          },
+        },
+      );
+      const res = await app.fetch(req);
+      assertEquals(res.status, 200);
+
+      const accounts = await res.json();
+      assert(Array.isArray(accounts));
+      assert(accounts.length >= 2);
     },
   );
-  const res = await app.fetch(req);
-  assertEquals(res.status, 200);
 
-  const account = await res.json();
-  assertEquals(account.id, "22222222-2222-4222-8222-222222222222");
-  assertEquals(account.plan, "pro");
+  testContext.kv.close();
 });
 
-Deno.test("PUT /v1/accounts/:account updates an account", async () => {
-  // First create an account
-  await app.fetch(
-    new Request("http://localhost/v1/accounts", {
+Deno.test("Accounts API routes - CRUD operations", async (t) => {
+  const testContext = await createTestContext();
+  const app = createApp(testContext);
+
+  await t.step("POST /v1/accounts creates a new account", async () => {
+    const req = new Request("http://localhost/v1/accounts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
+        "Authorization": `Bearer ${testContext.admin!.apiKey}`,
       },
       body: JSON.stringify({
-        id: "33333333-3333-4333-8333-333333333333",
-        description: "Original description",
-        plan: "free",
-        accessControl: { worlds: ["store-1"] },
+        description: "Test account",
+        planType: "free",
       }),
-    }),
-  );
+    });
+    const res = await app.fetch(req);
+    assertEquals(res.status, 201);
 
-  // Then update it
-  const updatedAccount: Account = {
-    id: "33333333-3333-4333-8333-333333333333",
-    apiKey: "sk_test_account_3_updated",
-    description: "Updated description",
-    plan: "pro",
-    accessControl: { worlds: ["store-1", "store-2", "store-3"] },
-  };
+    const body = await res.json();
+    assertEquals(body, null);
+  });
 
-  const req = new Request(
-    "http://localhost/v1/accounts/33333333-3333-4333-8333-333333333333",
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
-      body: JSON.stringify(updatedAccount),
-    },
-  );
-  const res = await app.fetch(req);
-  assertEquals(res.status, 204);
+  await t.step("GET /v1/accounts/:account retrieves an account", async () => {
+    // Create an account directly using db
+    const result = await testContext.db.accounts.add({
+      description: "Test account 2",
+      planType: "pro",
+      apiKey: crypto.randomUUID(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+    });
 
-  // Verify the update
-  const getRes = await app.fetch(
-    new Request(
-      "http://localhost/v1/accounts/33333333-3333-4333-8333-333333333333",
+    if (!result.ok) {
+      throw new Error("Failed to create test account");
+    }
+
+    const accountId = result.id;
+
+    // Then retrieve it
+    const req = new Request(
+      `http://localhost/v1/accounts/${accountId}`,
       {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
         },
       },
-    ),
-  );
-  const account = await getRes.json();
-  assertEquals(account.description, "Updated description");
-  assertEquals(account.plan, "pro");
-});
+    );
+    const res = await app.fetch(req);
+    assertEquals(res.status, 200);
 
-Deno.test("GET /v1/accounts/:account/usage returns usage", async () => {
-  // Setup: Inject usage data for testAccount (id: 1111...)
-  // deno-lint-ignore no-explicit-any
-  const event: any = {
-    id: "usage-test-event",
-    accountId: "11111111-1111-4111-8111-111111111111",
-    timestamp: Date.now(),
-    endpoint: "GET /worlds/{worldId}",
-    params: { worldId: "store-1" },
-    statusCode: 200,
-  };
-  await appContext.usageService.meter(event);
+    const account = await res.json();
+    assertEquals(account.description, "Test account 2");
+    assertEquals(account.planType, "pro");
+    assertEquals(typeof account.apiKey, "string");
+    assertEquals(typeof account.createdAt, "number");
+    assertEquals(typeof account.updatedAt, "number");
+  });
 
-  const req = new Request(
-    "http://localhost/v1/accounts/11111111-1111-4111-8111-111111111111/usage",
-    {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
+  await t.step("PUT /v1/accounts/:account updates an account", async () => {
+    // First create an account
+    const createResult = await testContext.db.accounts.add({
+      description: "Original description",
+      planType: "free",
+      apiKey: crypto.randomUUID(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+    });
+
+    if (!createResult.ok) {
+      throw new Error("Failed to create test account");
+    }
+
+    const accountId = createResult.id;
+
+    // Then update it
+    const req = new Request(
+      `http://localhost/v1/accounts/${accountId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+        },
+        body: JSON.stringify({
+          description: "Updated description",
+          planType: "pro",
+        }),
       },
+    );
+    const res = await app.fetch(req);
+    assertEquals(res.status, 204);
+
+    // Verify the update
+    const getRes = await app.fetch(
+      new Request(
+        `http://localhost/v1/accounts/${accountId}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+          },
+        },
+      ),
+    );
+    const account = await getRes.json();
+    assertEquals(account.description, "Updated description");
+    assertEquals(account.planType, "pro");
+  });
+
+  await t.step("DELETE /v1/accounts/:account removes an account", async () => {
+    // First create an account
+    const createResult = await testContext.db.accounts.add({
+      description: "To be deleted",
+      planType: "free",
+      apiKey: crypto.randomUUID(),
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+    });
+
+    if (!createResult.ok) {
+      throw new Error("Failed to create test account");
+    }
+
+    const accountId = createResult.id;
+
+    // Then delete it
+    const req = new Request(
+      `http://localhost/v1/accounts/${accountId}`,
+      {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+        },
+      },
+    );
+    const res = await app.fetch(req);
+    assertEquals(res.status, 204);
+
+    // Verify it's gone
+    const getRes = await app.fetch(
+      new Request(
+        `http://localhost/v1/accounts/${accountId}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+          },
+        },
+      ),
+    );
+    assertEquals(getRes.status, 404);
+  });
+
+  await t.step(
+    "POST /v1/accounts/:account/rotate rotates account API key",
+    async () => {
+      // First create an account
+      const createResult = await testContext.db.accounts.add({
+        description: "Account to rotate",
+        planType: "free",
+        apiKey: crypto.randomUUID(),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+
+      if (!createResult.ok) {
+        throw new Error("Failed to create test account");
+      }
+
+      const accountId = createResult.id;
+
+      // Get the original API key
+      const originalAccount = await testContext.db.accounts.find(accountId);
+      if (!originalAccount) {
+        throw new Error("Failed to find created account");
+      }
+      const originalApiKey = originalAccount.value.apiKey;
+
+      // Rotate the key
+      const req = new Request(
+        `http://localhost/v1/accounts/${accountId}/rotate`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+          },
+        },
+      );
+      const res = await app.fetch(req);
+      assertEquals(res.status, 204);
+
+      // Verify the key was rotated
+      const getRes = await app.fetch(
+        new Request(
+          `http://localhost/v1/accounts/${accountId}`,
+          {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+            },
+          },
+        ),
+      );
+      assertEquals(getRes.status, 200);
+      const account = await getRes.json();
+      assert(
+        account.apiKey !== originalApiKey,
+        "API key should be different after rotation",
+      );
     },
   );
-  const res = await app.fetch(req);
-  assertEquals(res.status, 200);
-  const body = await res.json();
-  assert(Array.isArray(body));
-  const bucket = body.find((b: { endpoint: string; requestCount: number }) =>
-    b.endpoint === "GET /worlds/store-1"
-  );
-  assert(bucket);
-  assertEquals(bucket.requestCount, 1);
+
+  testContext.kv.close();
 });
 
-Deno.test("DELETE /v1/accounts/:account removes an account", async () => {
-  // First create an account
-  await app.fetch(
-    new Request("http://localhost/v1/accounts", {
+Deno.test("Accounts API routes - Error handling", async (t) => {
+  const testContext = await createTestContext();
+  const app = createApp(testContext);
+
+  await t.step("POST /v1/accounts returns 401 without valid auth", async () => {
+    const req = new Request("http://localhost/v1/accounts", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
+        "Authorization": "Bearer invalid-token",
       },
       body: JSON.stringify({
-        id: "44444444-4444-4444-8444-444444444444",
-        description: "To be deleted",
-        plan: "free",
-        accessControl: { worlds: [] },
+        description: "Test account",
+        planType: "free",
       }),
-    }),
-  );
+    });
+    const res = await app.fetch(req);
+    assertEquals(res.status, 401);
+  });
 
-  // Then delete it
-  const req = new Request(
-    "http://localhost/v1/accounts/44444444-4444-4444-8444-444444444444",
-    {
-      method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
+  await t.step(
+    "POST /v1/accounts returns 403 without admin access",
+    async () => {
+      // Create a non-admin account
+      const createResult = await testContext.db.accounts.add({
+        description: "Non-admin account",
+        planType: "free",
+        apiKey: "test-api-key-123",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+
+      if (!createResult.ok) {
+        throw new Error("Failed to create test account");
+      }
+
+      const req = new Request("http://localhost/v1/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer test-api-key-123",
+        },
+        body: JSON.stringify({
+          description: "Test account",
+          planType: "free",
+        }),
+      });
+      const res = await app.fetch(req);
+      assertEquals(res.status, 403);
     },
   );
-  const res = await app.fetch(req);
-  assertEquals(res.status, 204);
 
-  // Verify it's gone
-  const getRes = await app.fetch(
-    new Request(
-      "http://localhost/v1/accounts/44444444-4444-4444-8444-444444444444",
-      {
+  await t.step(
+    "GET /v1/accounts/:account returns 404 for non-existent account",
+    async () => {
+      const req = new Request("http://localhost/v1/accounts/non-existent-id", {
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
         },
-      },
-    ),
-  );
-  assertEquals(getRes.status, 404);
-});
-
-Deno.test("POST /v1/accounts returns 401 without valid auth", async () => {
-  const req = new Request("http://localhost/v1/accounts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": "Bearer invalid-token",
-    },
-    body: JSON.stringify(testAccount),
-  });
-  const res = await app.fetch(req);
-  assertEquals(res.status, 401);
-});
-
-Deno.test("GET /v1/accounts/:account returns 404 for non-existent account", async () => {
-  const req = new Request("http://localhost/v1/accounts/non-existent", {
-    method: "GET",
-    headers: {
-      "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-    },
-  });
-  const res = await app.fetch(req);
-  assertEquals(res.status, 404);
-});
-
-Deno.test("PUT /v1/accounts/:account returns 400 for ID mismatch", async () => {
-  const req = new Request("http://localhost/v1/accounts/account-a", {
-    method: "PUT",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-    },
-    body: JSON.stringify({
-      id: "account-b",
-      description: "Mismatched ID",
-      plan: "free",
-      accessControl: { worlds: [] },
-    }),
-  });
-  const res = await app.fetch(req);
-  assertEquals(res.status, 400);
-});
-
-Deno.test("POST /v1/accounts returns 409 if account already exists", async () => {
-  // First create an account
-  const accountId = "55555555-5555-5555-8555-555555555555";
-  await app.fetch(
-    new Request("http://localhost/v1/accounts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        id: accountId,
-        description: "First account",
-        plan: "free",
-        accessControl: { worlds: [] },
-      }),
-    }),
-  );
-
-  // Try to create it again
-  const req = new Request("http://localhost/v1/accounts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-    },
-    body: JSON.stringify({
-      id: accountId,
-      description: "Duplicate account",
-      plan: "free",
-      accessControl: { worlds: [] },
-    }),
-  });
-  const res = await app.fetch(req);
-  assertEquals(res.status, 409);
-});
-
-const adminKey = "admin-secret-token";
-
-Deno.test("GET /v1/accounts/:account/worlds", async (_t) => {
-  const ctx = await sqliteAppContext(":memory:");
-  const testApp = await createApp(ctx);
-  Deno.env.set("ADMIN_API_KEY", adminKey);
-
-  const { oxigraphService, accountsService } = ctx;
-
-  // Create account with access to these stores
-  const accountId = "66666666-6666-6666-8666-666666666666";
-
-  // Create owner account first to satisfy foreign key constraint
-  await accountsService.set({
-    id: accountId,
-    description: "Owner of stores",
-    plan: "free",
-    apiKey: "owner-api-key", // needed for creation
-    accessControl: { worlds: [] },
-  });
-
-  await oxigraphService.setStore("store-A", accountId, new Store());
-  await oxigraphService.setStore("store-B", accountId, new Store());
-
-  const worlds = ["store-A", "store-B"];
-  await testApp.fetch(
-    new Request("http://localhost/v1/accounts", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
-      body: JSON.stringify({
-        id: accountId,
-        description: "Account with worlds",
-        plan: "free",
-        accessControl: { worlds },
-      }),
-    }),
-  );
-
-  // Retrieve worlds
-  const req = new Request(
-    `http://localhost/v1/accounts/${accountId}/worlds`,
-    {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("ADMIN_API_KEY")}`,
-      },
+      });
+      const res = await app.fetch(req);
+      assertEquals(res.status, 404);
     },
   );
-  const res = await testApp.fetch(req);
-  assertEquals(res.status, 200);
 
-  const retrievedWorlds = await res.json();
-  assertEquals(retrievedWorlds.length, 2);
+  testContext.kv.close();
+});
 
-  const storeA = retrievedWorlds.find((w: WorldMetadata) => w.id === "store-A");
-  assertEquals(storeA?.createdBy, accountId);
-  assertEquals(storeA?.tripleCount, 0);
+Deno.test("Accounts API routes - Edge cases", async (t) => {
+  const testContext = await createTestContext();
+  const app = createApp(testContext);
 
-  const storeB = retrievedWorlds.find((w: WorldMetadata) => w.id === "store-B");
-  assertEquals(storeB?.createdBy, accountId);
-  assertEquals(storeB?.tripleCount, 0);
+  await t.step(
+    "POST /v1/accounts can create multiple accounts with same description",
+    async () => {
+      // Since the route auto-generates IDs, we can create multiple accounts
+      // with the same description without conflicts
+      const req1 = new Request("http://localhost/v1/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+        },
+        body: JSON.stringify({
+          description: "Duplicate description test",
+          planType: "free",
+        }),
+      });
+      const res1 = await app.fetch(req1);
+      assertEquals(res1.status, 201);
 
-  // kv.close(); // Not needed for SQLite / in-memory context auto-cleanup
+      const req2 = new Request("http://localhost/v1/accounts", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+        },
+        body: JSON.stringify({
+          description: "Duplicate description test",
+          planType: "free",
+        }),
+      });
+      const res2 = await app.fetch(req2);
+      assertEquals(res2.status, 201);
+    },
+  );
+
+  testContext.kv.close();
 });

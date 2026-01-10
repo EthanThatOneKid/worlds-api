@@ -1,146 +1,308 @@
+// @deno-types="@types/n3"
+import { DataFactory, Writer } from "n3";
 import { Router } from "@fartlabs/rt";
+import { authorizeRequest } from "#/server/middleware/auth.ts";
 import type { AppContext } from "#/server/app-context.ts";
-import { Store } from "oxigraph";
-import { plans, reachedPlanLimit } from "#/core/accounts/plans.ts";
-import { parseSparqlRequest } from "./sparql-request-parser.ts";
-import { serializeSparqlResult } from "./sparql-result-serializer.ts";
+import type { DatasetParams } from "#/server/db/sparql.ts";
+import { sparql } from "#/server/db/sparql.ts";
 
-import { authorizeRequest } from "#/core/accounts/authorize.ts";
+const { namedNode, quad } = DataFactory;
 
-export default ({ oxigraphService, accountsService }: AppContext) => {
+/**
+ * ParsedQuery parses the query and dataset parameters from the request.
+ */
+interface ParsedQuery {
+  query: string | null;
+  datasetParams: DatasetParams;
+}
+
+/**
+ * parseQuery parses the query and dataset parameters from the request.
+ * Supports GET, POST with body or query parameters (per SPARQL spec)
+ */
+async function parseQuery(
+  request: Request,
+): Promise<ParsedQuery> {
+  const url = new URL(request.url);
+  const contentType = request.headers.get("content-type") || "";
+  const method = request.method;
+
+  // Extract dataset parameters from URL or form data
+  const defaultGraphUris: string[] = [];
+  const namedGraphUris: string[] = [];
+
+  // Get dataset parameters from URL query string
+  url.searchParams.getAll("default-graph-uri").forEach((uri) => {
+    defaultGraphUris.push(uri);
+  });
+  url.searchParams.getAll("named-graph-uri").forEach((uri) => {
+    namedGraphUris.push(uri);
+  });
+
+  let query: string | null = null;
+
+  if (method === "GET") {
+    // GET: query must be in URL parameter
+    query = url.searchParams.get("query");
+  } else if (method === "POST") {
+    // Check query parameter first (valid for POST with application/sparql-query)
+    const queryParam = url.searchParams.get("query");
+    if (queryParam) {
+      query = queryParam;
+    } else {
+      // Check POST body based on content type
+      if (contentType.includes("application/x-www-form-urlencoded")) {
+        const formData = await request.formData();
+        query = formData.get("query") as string | null;
+        // Also get dataset params from form data
+        formData.getAll("default-graph-uri").forEach((uri) => {
+          if (typeof uri === "string") {
+            defaultGraphUris.push(uri);
+          }
+        });
+        formData.getAll("named-graph-uri").forEach((uri) => {
+          if (typeof uri === "string") {
+            namedGraphUris.push(uri);
+          }
+        });
+      } else if (contentType.includes("application/sparql-query")) {
+        query = await request.text();
+      } else if (contentType.includes("application/sparql-update")) {
+        query = await request.text();
+      }
+    }
+  }
+
+  return {
+    query,
+    datasetParams: {
+      defaultGraphUris,
+      namedGraphUris,
+    },
+  };
+}
+
+/**
+ * Helper function to check if query is an update
+ * Needed to enforce POST-only for updates and return 204 status
+ */
+function isUpdateQuery(query: string): boolean {
+  const upperQuery = query.trim().toUpperCase();
+  return upperQuery.startsWith("INSERT") ||
+    upperQuery.startsWith("DELETE") ||
+    upperQuery.startsWith("LOAD") ||
+    upperQuery.startsWith("CLEAR") ||
+    upperQuery.startsWith("CREATE") ||
+    upperQuery.startsWith("DROP") ||
+    upperQuery.startsWith("COPY") ||
+    upperQuery.startsWith("MOVE") ||
+    upperQuery.startsWith("ADD");
+}
+
+/**
+ * Generates SPARQL Service Description in RDF format
+ */
+function generateServiceDescription(endpointUrl: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new Writer({ format: "Turtle" });
+
+    // SPARQL Service Description vocabulary
+    const sd = "http://www.w3.org/ns/sparql-service-description#";
+    const rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#";
+    const endpoint = namedNode(endpointUrl);
+    const serviceType = namedNode(`${sd}Service`);
+    const endpointProperty = namedNode(`${sd}endpoint`);
+
+    // Required triples
+    writer.addQuad(quad(endpoint, namedNode(`${rdf}type`), serviceType));
+    writer.addQuad(quad(endpoint, endpointProperty, endpoint));
+
+    // Advertise supported formats
+    const supportedFormat = namedNode(`${sd}supportedFormat`);
+    const jsonFormat = namedNode(
+      "http://www.w3.org/ns/formats/SPARQL_Results_JSON",
+    );
+    writer.addQuad(quad(endpoint, supportedFormat, jsonFormat));
+
+    // Advertise supported languages
+    const supportedLanguage = namedNode(`${sd}supportedLanguage`);
+    const sparql11Query = namedNode(`${sd}SPARQL11Query`);
+    const sparql11Update = namedNode(`${sd}SPARQL11Update`);
+    writer.addQuad(quad(endpoint, supportedLanguage, sparql11Query));
+    writer.addQuad(quad(endpoint, supportedLanguage, sparql11Update));
+
+    writer.end((error, result) => {
+      if (error) {
+        reject(error);
+      } else {
+        // If RDF/XML is requested, convert (for now, just return Turtle)
+        // Full RDF/XML conversion would require additional library
+        resolve(result as string);
+      }
+    });
+  });
+}
+
+/**
+ * Shared handler for executing SPARQL queries and updates
+ */
+async function executeSparqlRequest(
+  kv: Deno.Kv,
+  request: Request,
+  worldId: string,
+): Promise<Response> {
+  const { query } = await parseQuery(request);
+
+  // If no query, this should only happen for GET - return service description
+  if (!query) {
+    if (request.method === "GET") {
+      const endpointUrl = new URL(request.url).toString();
+      const acceptHeader = request.headers.get("accept");
+      const serviceDescription = await generateServiceDescription(
+        endpointUrl,
+      );
+
+      // Determine content type based on Accept header
+      const contentType = acceptHeader?.includes("application/rdf+xml")
+        ? "application/rdf+xml"
+        : "text/turtle";
+
+      return new Response(serviceDescription, {
+        headers: { "Content-Type": contentType },
+      });
+    } else {
+      return new Response("Query or update required", { status: 400 });
+    }
+  }
+
+  // Check if this is an update query
+  const isUpdate = isUpdateQuery(query);
+
+  // Updates are only allowed via POST
+  if (isUpdate && request.method !== "POST") {
+    return new Response("Method Not Allowed", { status: 405 });
+  }
+
+  // Execute query or update using centralized function
+  const response = await sparql(
+    kv,
+    worldId,
+    query,
+  );
+
+  // For updates, return 204 instead of the stream response
+  if (isUpdate) {
+    return new Response(null, { status: 204 });
+  }
+
+  // For queries, return the stream response
+  return response;
+}
+
+export default (appContext: AppContext) => {
+  const { db, kv } = appContext;
   return new Router()
     .get(
       "/v1/worlds/:world/sparql",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-
-        if (!authorized) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-
         const worldId = ctx.params?.pathname.groups.world;
         if (!worldId) {
           return new Response("World ID required", { status: 400 });
         }
 
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
+          return new Response("World not found", { status: 404 });
+        }
+
+        const worldResult = await db.worlds.find(worldId);
         if (
-          !authorized.admin &&
-          !authorized.account?.accessControl.worlds.includes(worldId)
+          !worldResult || worldResult.value.deletedAt !== null ||
+          (worldResult.value.accountId !== authorized.account?.id &&
+            !authorized.admin)
         ) {
           return new Response("World not found", { status: 404 });
         }
 
-        const url = new URL(ctx.request.url);
-        const query = url.searchParams.get("query");
-
-        if (!query) {
-          return Response.json({ error: "Missing query parameter" }, {
-            status: 400,
-          });
-        }
-
         try {
-          const result = await oxigraphService.query(worldId, query);
-          return Response.json(serializeSparqlResult(result));
-        } catch (err) {
-          if (err instanceof Error && err.message === "Store not found") {
-            return new Response("World not found", { status: 404 });
-          }
-          return Response.json({ error: "Invalid Query" }, { status: 400 });
+          return await executeSparqlRequest(kv, ctx.request, worldId);
+        } catch (error) {
+          console.error("SPARQL query error:", error);
+          return Response.json(
+            {
+              error: error instanceof Error ? error.message : "Query failed",
+            },
+            { status: 400 },
+          );
         }
       },
     )
     .post(
       "/v1/worlds/:world/sparql",
       async (ctx) => {
-        const authorized = await authorizeRequest(accountsService, ctx.request);
-
-        if (!authorized) {
-          return new Response("Unauthorized", { status: 401 });
-        }
-
         const worldId = ctx.params?.pathname.groups.world;
         if (!worldId) {
           return new Response("World ID required", { status: 400 });
         }
 
-        // Access check deferred to handle lazy claiming
-
-        let parsed;
-        try {
-          parsed = await parseSparqlRequest(ctx.request);
-        } catch (_e) {
-          return Response.json({ error: "Unsupported Content-Type" }, {
-            status: 400,
-          });
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
+          return new Response("World not found", { status: 404 });
         }
 
-        const { query, update } = parsed;
+        const worldResult = await db.worlds.find(worldId);
+        if (
+          !worldResult || worldResult.value.deletedAt !== null ||
+          (worldResult.value.accountId !== authorized.account?.id &&
+            !authorized.admin)
+        ) {
+          return new Response("World not found", { status: 404 });
+        }
+
+        // Check for unsupported content types
+        const contentType = ctx.request.headers.get("content-type") || "";
+        if (
+          contentType &&
+          !contentType.includes("application/x-www-form-urlencoded") &&
+          !contentType.includes("application/sparql-query") &&
+          !contentType.includes("application/sparql-update") &&
+          !contentType.includes("text/plain")
+        ) {
+          return new Response("Unsupported Media Type", { status: 415 });
+        }
 
         try {
-          const metadata = await oxigraphService.getMetadata(worldId);
-
-          if (metadata) {
-            // Check access (404 privacy)
-            if (
-              !authorized.admin &&
-              !authorized.account?.accessControl.worlds.includes(worldId)
-            ) {
-              return new Response("World not found", { status: 404 });
-            }
-          }
-
-          if (query) {
-            if (!metadata) {
-              return new Response("World not found", { status: 404 });
-            }
-            const result = await oxigraphService.query(worldId, query);
-            return Response.json(serializeSparqlResult(result));
-          } else if (update) {
-            if (!metadata) {
-              // Lazy claiming
-              if (!authorized.admin && authorized.account) {
-                if (reachedPlanLimit(authorized.account)) {
-                  return Response.json(
-                    {
-                      error: "Plan limit reached",
-                      limit: plans[authorized.account.plan].worlds,
-                    },
-                    { status: 403 },
-                  );
-                }
-                // Add to access control
-                await accountsService.addWorldAccess(
-                  authorized.account.id,
-                  worldId,
-                );
-                authorized.account.accessControl.worlds.push(worldId);
-              }
-
-              // Determine owner
-              const owner = authorized.account?.id ||
-                (authorized.admin ? "admin" : "unknown");
-              if (owner === "unknown") {
-                return new Response("Unauthorized", { status: 401 });
-              }
-
-              // Create empty store
-              await oxigraphService.setStore(worldId, owner, new Store());
-            }
-
-            await oxigraphService.update(worldId, update);
-            return new Response(null, { status: 204 });
-          } else {
-            return Response.json({ error: "Missing query or update" }, {
-              status: 400,
-            });
-          }
-        } catch (err) {
-          if (err instanceof Error && err.message === "Store not found") {
-            return new Response("World not found", { status: 404 });
-          }
-          return Response.json({ error: "Execution failed" }, { status: 400 });
+          return await executeSparqlRequest(kv, ctx.request, worldId);
+        } catch (error) {
+          console.error("SPARQL query/update error:", error);
+          return Response.json(
+            {
+              error: error instanceof Error
+                ? error.message
+                : "Query/update failed",
+            },
+            { status: 400 },
+          );
         }
+      },
+    )
+    // Handle unsupported methods (PUT, DELETE, etc.) via PUT and DELETE routes
+    .put(
+      "/v1/worlds/:world/sparql",
+      () => {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { "Allow": "GET, POST" },
+        });
+      },
+    )
+    .delete(
+      "/v1/worlds/:world/sparql",
+      () => {
+        return new Response("Method Not Allowed", {
+          status: 405,
+          headers: { "Allow": "GET, POST" },
+        });
       },
     );
 };
