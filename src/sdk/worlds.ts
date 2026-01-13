@@ -1,4 +1,4 @@
-import type { UsageBucketRecord, WorldRecord } from "./types.ts";
+import type { SearchResult, UsageBucketRecord, WorldRecord } from "./types.ts";
 
 /**
  * WorldsOptions are the options for the Worlds API SDK.
@@ -123,8 +123,7 @@ export class Worlds {
   public async sparqlQueryWorld(
     worldId: string,
     query: string,
-    // deno-lint-ignore no-explicit-any
-  ): Promise<any> {
+  ): Promise<unknown> {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/sparql`,
     );
@@ -196,6 +195,7 @@ export class Worlds {
     }
     return await response.json();
   }
+
   /**
    * searchWorld searches a world.
    */
@@ -206,7 +206,7 @@ export class Worlds {
       limit?: number;
       offset?: number;
     },
-  ): Promise<unknown> {
+  ): Promise<SearchResult> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}/search`);
     url.searchParams.set("q", query);
     if (options?.limit) {
@@ -286,8 +286,7 @@ export class World {
       limit?: number;
       offset?: number;
     },
-    // TODO: Set up return type.
-  ): Promise<unknown> {
+  ): Promise<SearchResult> {
     return this.worlds.searchWorld(this.options.worldId, query, options);
   }
 }

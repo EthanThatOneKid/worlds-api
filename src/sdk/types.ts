@@ -1,3 +1,14 @@
+import type { SearchResult as _SearchResult } from "@fartlabs/search-store";
+
+/**
+ * SearchResult represents a search result.
+ */
+export type SearchResult = _SearchResult<{
+  subject: string;
+  predicate: string;
+  object: string;
+}>;
+
 /**
  * AccountRecord represents an account in the Worlds API.
  */
