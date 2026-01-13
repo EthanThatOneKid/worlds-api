@@ -1,4 +1,4 @@
-import type { WorldsOptions } from "./worlds.ts";
+import type { WorldsOptions } from "#/sdk/types.ts";
 import type { PlanRecord } from "./types.ts";
 
 /**
@@ -10,9 +10,9 @@ export class Plans {
   ) {}
 
   /**
-   * getPlans gets all plans from the Worlds API.
+   * list lists all plans from the Worlds API.
    */
-  public async getPlans(): Promise<PlanRecord[]> {
+  public async list(): Promise<PlanRecord[]> {
     const url = new URL(`${this.options.baseUrl}/v1/plans`);
     const response = await fetch(url, {
       headers: {
@@ -27,9 +27,9 @@ export class Plans {
   }
 
   /**
-   * createPlan creates a plan in the Worlds API.
+   * create creates a plan in the Worlds API.
    */
-  public async createPlan(
+  public async create(
     data: PlanRecord,
   ): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/v1/plans`);
@@ -50,9 +50,9 @@ export class Plans {
   }
 
   /**
-   * getPlan gets a plan from the Worlds API.
+   * get retrieves a plan from the Worlds API.
    */
-  public async getPlan(
+  public async get(
     planType: string,
   ): Promise<PlanRecord | null> {
     if (!planType) {
@@ -79,9 +79,9 @@ export class Plans {
   }
 
   /**
-   * updatePlan updates a plan in the Worlds API.
+   * update updates a plan in the Worlds API.
    */
-  public async updatePlan(
+  public async update(
     planType: string,
     data: PlanRecord,
   ): Promise<void> {
@@ -103,9 +103,9 @@ export class Plans {
   }
 
   /**
-   * deletePlan deletes a plan from the Worlds API.
+   * delete deletes a plan from the Worlds API.
    */
-  public async deletePlan(planType: string): Promise<void> {
+  public async delete(planType: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/v1/plans/${planType}`);
     const response = await fetch(
       url,

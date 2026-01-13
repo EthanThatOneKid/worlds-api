@@ -1,4 +1,4 @@
-import type { WorldsOptions } from "./worlds.ts";
+import type { WorldsOptions } from "#/sdk/types.ts";
 import type { AccountRecord, CreateAccountParams } from "./types.ts";
 
 /**
@@ -10,9 +10,9 @@ export class Accounts {
   ) {}
 
   /**
-   * getAccounts gets all accounts from the Worlds API.
+   * list paginates accounts from the Worlds API.
    */
-  public async getAccounts(
+  public async list(
     page = 1,
     pageSize = 20,
   ): Promise<AccountRecord[]> {
@@ -32,9 +32,9 @@ export class Accounts {
   }
 
   /**
-   * createAccount creates an account in the Worlds API.
+   * create creates an account in the Worlds API.
    */
-  public async createAccount(data: CreateAccountParams): Promise<void> {
+  public async create(data: CreateAccountParams): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/v1/accounts`);
     const response = await fetch(
       url,
@@ -53,9 +53,9 @@ export class Accounts {
   }
 
   /**
-   * getAccount gets an account from the Worlds API.
+   * get retrieves an account from the Worlds API.
    */
-  public async getAccount(
+  public async get(
     accountId: string,
   ): Promise<AccountRecord | null> {
     const url = new URL(`${this.options.baseUrl}/v1/accounts/${accountId}`);
@@ -79,9 +79,9 @@ export class Accounts {
   }
 
   /**
-   * updateAccount updates an account in the Worlds API.
+   * update updates an account in the Worlds API.
    */
-  public async updateAccount(
+  public async update(
     accountId: string,
     data: Partial<AccountRecord>,
   ): Promise<void> {
@@ -103,9 +103,9 @@ export class Accounts {
   }
 
   /**
-   * deleteAccount deletes an account from the Worlds API.
+   * delete deletes an account from the Worlds API.
    */
-  public async deleteAccount(accountId: string): Promise<void> {
+  public async delete(accountId: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/v1/accounts/${accountId}`);
     const response = await fetch(
       url,
@@ -122,9 +122,9 @@ export class Accounts {
   }
 
   /**
-   * rotateAccountKey rotates the API key of an account.
+   * rotate rotates the API key of an account.
    */
-  public async rotateAccountKey(accountId: string): Promise<void> {
+  public async rotate(accountId: string): Promise<void> {
     const url = new URL(
       `${this.options.baseUrl}/v1/accounts/${accountId}/rotate`,
     );

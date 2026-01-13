@@ -1,12 +1,9 @@
-import type { SearchResult, UsageBucketRecord, WorldRecord } from "./types.ts";
-
-/**
- * WorldsOptions are the options for the Worlds API SDK.
- */
-export interface WorldsOptions {
-  baseUrl: string;
-  apiKey: string;
-}
+import type {
+  SearchResult,
+  UsageBucketRecord,
+  WorldRecord,
+  WorldsOptions,
+} from "./types.ts";
 
 /**
  * Worlds is a TypeScript SDK for the Worlds API.
@@ -17,9 +14,9 @@ export class Worlds {
   ) {}
 
   /**
-   * getWorlds gets all worlds from the Worlds API.
+   * list paginates all worlds from the Worlds API.
    */
-  public async getWorlds(page = 1, pageSize = 20): Promise<WorldRecord[]> {
+  public async list(page = 1, pageSize = 20): Promise<WorldRecord[]> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
     url.searchParams.set("page", page.toString());
     url.searchParams.set("pageSize", pageSize.toString());
@@ -36,11 +33,9 @@ export class Worlds {
   }
 
   /**
-   * getWorld gets a world from the Worlds API.
+   * get gets a world from the Worlds API.
    */
-  public async getWorld(
-    worldId: string,
-  ): Promise<WorldRecord | null> {
+  public async get(worldId: string): Promise<WorldRecord | null> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
     const response = await fetch(
       url,
@@ -61,7 +56,10 @@ export class Worlds {
     return await response.json();
   }
 
-  public async createWorld(data: WorldRecord): Promise<void> {
+  /**
+   * create creates a world in the Worlds API.
+   */
+  public async create(data: WorldRecord): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
     const response = await fetch(
       url,
@@ -79,7 +77,10 @@ export class Worlds {
     }
   }
 
-  public async updateWorld(worldId: string, data: WorldRecord): Promise<void> {
+  /**
+   * update updates a world in the Worlds API.
+   */
+  public async update(worldId: string, data: WorldRecord): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
     const response = await fetch(
       url,
@@ -98,9 +99,9 @@ export class Worlds {
   }
 
   /**
-   * removeWorld removes a world from the Worlds API.
+   * remove removes a world from the Worlds API.
    */
-  public async removeWorld(worldId: string): Promise<void> {
+  public async remove(worldId: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
     const response = await fetch(
       url,
@@ -117,10 +118,12 @@ export class Worlds {
   }
 
   /**
-   * sparqlQueryWorld executes a SPARQL query against a world in the Worlds API.
-   * Uses POST with application/sparql-query for robustness.
+   * sparqlQuery executes a SPARQL query against a world
+   * in the Worlds API.
+   *
+   * @see https://www.w3.org/TR/sparql11-query/
    */
-  public async sparqlQueryWorld(
+  public async sparqlQuery(
     worldId: string,
     query: string,
   ): Promise<unknown> {
@@ -148,9 +151,12 @@ export class Worlds {
   }
 
   /**
-   * sparqlUpdateWorld executes a SPARQL update against a world in the Worlds API.
+   * sparqlUpdate executes a SPARQL update against a world
+   * in the Worlds API.
+   *
+   * @see https://www.w3.org/TR/sparql11-update/
    */
-  public async sparqlUpdateWorld(
+  public async sparqlUpdate(
     worldId: string,
     update: string,
   ): Promise<void> {
@@ -174,11 +180,9 @@ export class Worlds {
   }
 
   /**
-   * getWorldUsage gets the usage for a specific world.
+   * getUsage gets the usage for a specific world.
    */
-  public async getWorldUsage(
-    worldId: string,
-  ): Promise<UsageBucketRecord[]> {
+  public async getUsage(worldId: string): Promise<UsageBucketRecord[]> {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/usage`,
     );
@@ -197,9 +201,9 @@ export class Worlds {
   }
 
   /**
-   * searchWorld searches a world.
+   * search searches a world.
    */
-  public async searchWorld(
+  public async search(
     worldId: string,
     query: string,
     options?: {
@@ -246,21 +250,21 @@ export class World {
    * get gets the world.
    */
   public get(): Promise<WorldRecord | null> {
-    return this.worlds.getWorld(this.options.worldId);
+    return this.worlds.get(this.options.worldId);
   }
 
   /**
    * remove removes the world.
    */
   public remove(): Promise<void> {
-    return this.worlds.removeWorld(this.options.worldId);
+    return this.worlds.remove(this.options.worldId);
   }
 
   /**
    * update updates the world.
    */
   public update(data: WorldRecord): Promise<void> {
-    return this.worlds.updateWorld(this.options.worldId, data);
+    return this.worlds.update(this.options.worldId, data);
   }
 
   /**
@@ -268,15 +272,16 @@ export class World {
    */
   // deno-lint-ignore no-explicit-any
   public sparqlQuery(query: string): Promise<any> {
-    return this.worlds.sparqlQueryWorld(this.options.worldId, query);
+    return this.worlds.sparqlQuery(this.options.worldId, query);
   }
 
   /**
    * sparqlUpdate executes a SPARQL update against the world.
    */
   public sparqlUpdate(update: string): Promise<void> {
-    return this.worlds.sparqlUpdateWorld(this.options.worldId, update);
+    return this.worlds.sparqlUpdate(this.options.worldId, update);
   }
+
   /**
    * search searches within the world.
    */
@@ -287,6 +292,6 @@ export class World {
       offset?: number;
     },
   ): Promise<SearchResult> {
-    return this.worlds.searchWorld(this.options.worldId, query, options);
+    return this.worlds.search(this.options.worldId, query, options);
   }
 }

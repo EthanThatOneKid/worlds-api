@@ -1,7 +1,10 @@
 {
   "name": "@fartlabs/worlds",
-  "version": "0.0.14",
-  "exports": "./src/sdk/mod.ts",
+  "version": "0.0.15",
+  "exports": {
+    ".": "./src/sdk/mod.ts",
+    "./internal": "./src/sdk/internal/mod.ts"
+  },
   "imports": {
     "#/": "./src/",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.0.5",

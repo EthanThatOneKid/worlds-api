@@ -1,7 +1,7 @@
+import type { WorldsOptions } from "#/sdk/types.ts";
+import { Worlds } from "#/sdk/worlds.ts";
 import { Accounts } from "./accounts.ts";
 import { Plans } from "./plans.ts";
-import type { WorldsOptions } from "./worlds.ts";
-import { Worlds } from "./worlds.ts";
 
 /**
  * InternalWorlds is a TypeScript SDK for internal-only operations

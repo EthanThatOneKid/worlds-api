@@ -33,27 +33,35 @@ const world = new World({
 // Add some knowledge (triples) to your world.
 await world.sparqlUpdate(`
   INSERT DATA {
-    <http://example.com/alice> <http://schema.org/knows> <http://example.com/bob> .
-    <http://example.com/bob> <http://schema.org/name> "Bob" .
+    <http://example.com/ethan> <http://schema.org/relatedTo> <http://example.com/gregory> .
+    <http://example.com/gregory> <http://schema.org/givenName> "Gregory" .
   }
 `);
+
+// Search your world to find the named node for Gregory.
+const searchResult = await world.search("Gregory");
+console.log(searchResult);
 
 // Reason over your world using SPARQL.
 const result = await world.sparqlQuery(`
   SELECT ?name WHERE {
-    <http://example.com/alice> <http://schema.org/knows> ?person .
-    ?person <http://schema.org/name> ?name .
+    <http://example.com/ethan> <http://schema.org/relatedTo> ?person .
+    ?person <http://schema.org/givenName> ?name .
   }
 `);
 
-console.log(result); // [{ name: "Bob" }]
-
-// Search your world.
-const searchResult = await world.search("Bob");
-console.log(searchResult);
+console.log(result);
+// {
+//   head: { vars: [ "name" ] },
+//   results: {
+//     bindings: [
+//       {
+//         name: { type: "literal", value: "Gregory" }
+//       }
+//     ]
+//   }
+// }
 ```
-
-<!-- TODO: Show the methods' result values. -->
 
 ## Development
 

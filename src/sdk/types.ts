@@ -1,6 +1,14 @@
 import type { SearchResult as _SearchResult } from "@fartlabs/search-store";
 
 /**
+ * WorldsOptions are the options for the Worlds API SDK.
+ */
+export interface WorldsOptions {
+  baseUrl: string;
+  apiKey: string;
+}
+
+/**
  * SearchResult represents a search result.
  */
 export type SearchResult = _SearchResult<{
@@ -8,36 +16,6 @@ export type SearchResult = _SearchResult<{
   predicate: string;
   object: string;
 }>;
-
-/**
- * AccountRecord represents an account in the Worlds API.
- */
-export interface AccountRecord {
-  id: string;
-  description: string | null;
-  planType: string;
-  apiKey: string;
-  createdAt: number;
-  updatedAt: number;
-  deletedAt: number | null;
-}
-
-/**
- * CreateAccountParams represents the parameters for creating an account.
- */
-export type CreateAccountParams = Omit<
-  AccountRecord,
-  "apiKey" | "createdAt" | "updatedAt" | "deletedAt"
->;
-
-/**
- * PlanRecord represents a subscription plan.
- */
-export interface PlanRecord {
-  planType: string;
-  quotaRequestsPerMin: number;
-  quotaStorageBytes: number;
-}
 
 /**
  * WorldRecord represents a world in the Worlds API.
