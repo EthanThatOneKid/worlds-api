@@ -22,9 +22,12 @@ export interface AccountRecord {
   deletedAt: number | null;
 }
 
+/**
+ * CreateAccountParams represents the parameters for creating an account.
+ */
 export type CreateAccountParams = Omit<
   AccountRecord,
-  "id" | "apiKey" | "createdAt" | "updatedAt" | "deletedAt"
+  "apiKey" | "createdAt" | "updatedAt" | "deletedAt"
 >;
 
 /**
