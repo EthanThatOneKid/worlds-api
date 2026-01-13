@@ -2,9 +2,9 @@ import type { WorldsOptions } from "./worlds.ts";
 import type { Account, CreateAccountParams } from "./types.ts";
 
 /**
- * Accounts is a TypeScript SDK for the Accounts API.
+ * AccountsAPI is a TypeScript SDK for the Accounts API.
  */
-export class Accounts {
+export class AccountsAPI {
   public constructor(
     public readonly options: WorldsOptions,
   ) {}

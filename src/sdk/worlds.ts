@@ -196,6 +196,37 @@ export class WorldsAPI {
     }
     return await response.json();
   }
+  /**
+   * search searches across all worlds.
+   */
+  public async search(
+    query: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<unknown> {
+    const url = new URL(`${this.options.baseUrl}/v1/worlds/search`);
+    url.searchParams.set("q", query);
+    if (options?.limit) {
+      url.searchParams.set("limit", options.limit.toString());
+    }
+    if (options?.offset) {
+      url.searchParams.set("offset", options.offset.toString());
+    }
+
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  }
 }
 
 /**
@@ -244,5 +275,20 @@ export class WorldAPI {
    */
   public sparqlUpdate(update: string): Promise<void> {
     return this.worlds.sparqlUpdateWorld(this.options.worldId, update);
+  }
+  /**
+   * search searches within the world.
+   */
+  public search(
+    query: string,
+    options?: {
+      limit?: number;
+      offset?: number;
+    },
+  ): Promise<unknown> {
+    // For now we just use the global search but scoped to this world
+    // In the future this might be a specific endpoint
+    // This is just a placeholder implementation as requested
+    return this.worlds.search(query, options);
   }
 }

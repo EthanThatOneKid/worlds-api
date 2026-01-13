@@ -1,21 +1,21 @@
-import { Accounts } from "./accounts.ts";
-import { Plans } from "./plans.ts";
+import { AccountsAPI } from "./accounts.ts";
+import { PlansAPI } from "./plans.ts";
 import type { WorldsOptions } from "./worlds.ts";
 import { WorldsAPI } from "./worlds.ts";
 
 /**
- * InternalWorlds is a TypeScript SDK for internal/owner-only operations
+ * InternalWorldsAPI is a TypeScript SDK for internal-only operations
  * on the Worlds API.
  */
-export class InternalWorlds {
-  public readonly accounts: Accounts;
-  public readonly plans: Plans;
+export class InternalWorldsAPI {
+  public readonly accounts: AccountsAPI;
+  public readonly plans: PlansAPI;
   public readonly worlds: WorldsAPI;
 
   public constructor(options: WorldsOptions) {
     // Initialize internal SDK modules.
-    this.accounts = new Accounts(options);
-    this.plans = new Plans(options);
+    this.accounts = new AccountsAPI(options);
+    this.plans = new PlansAPI(options);
 
     // Initialize public SDK modules.
     this.worlds = new WorldsAPI(options);

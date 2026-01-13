@@ -2,9 +2,9 @@ import type { WorldsOptions } from "./worlds.ts";
 import type { Plan } from "./types.ts";
 
 /**
- * Plans is a TypeScript SDK for the Plans API.
+ * PlansAPI is a TypeScript SDK for the Plans API.
  */
-export class Plans {
+export class PlansAPI {
   public constructor(
     public readonly options: WorldsOptions,
   ) {}
