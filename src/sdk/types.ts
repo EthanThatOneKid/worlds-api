@@ -17,6 +17,7 @@ export interface AccountRecord {
   description: string | null;
   planType: string;
   apiKey: string;
+  metadata: Record<string, string> | null;
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;

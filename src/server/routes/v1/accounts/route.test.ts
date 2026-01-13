@@ -13,6 +13,7 @@ Deno.test("Accounts API routes", async (t) => {
         description: "Test account 1",
         planType: "free",
         apiKey: crypto.randomUUID(),
+        metadata: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         deletedAt: null,
@@ -22,6 +23,7 @@ Deno.test("Accounts API routes", async (t) => {
         description: "Test account 2",
         planType: "pro",
         apiKey: crypto.randomUUID(),
+        metadata: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         deletedAt: null,
@@ -81,6 +83,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       description: "Test account 2",
       planType: "pro",
       apiKey: crypto.randomUUID(),
+      metadata: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       deletedAt: null,
@@ -119,6 +122,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       description: "Original description",
       planType: "free",
       apiKey: crypto.randomUUID(),
+      metadata: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       deletedAt: null,
@@ -171,6 +175,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       description: "To be deleted",
       planType: "free",
       apiKey: crypto.randomUUID(),
+      metadata: null,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       deletedAt: null,
@@ -218,6 +223,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
         description: "Account to rotate",
         planType: "free",
         apiKey: crypto.randomUUID(),
+        metadata: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         deletedAt: null,
@@ -270,6 +276,67 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
     },
   );
 
+  await t.step("POST /v1/accounts handles metadata", async () => {
+    // Create account with metadata
+    const req = new Request("http://localhost/v1/accounts", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+      },
+      body: JSON.stringify({
+        description: "Metadata account",
+        planType: "free",
+        metadata: {
+          key: "value",
+          nested: "prop-123",
+        },
+      }),
+    });
+    const res = await app.fetch(req);
+    assertEquals(res.status, 201);
+
+    // Find the account to verify
+    const { result } = await testContext.db.accounts.getMany();
+    const account = result.find((r) =>
+      r.value.description === "Metadata account"
+    );
+    assert(account, "Account should verify");
+    assertEquals(account.value.metadata, {
+      key: "value",
+      nested: "prop-123",
+    });
+
+    // Update metadata
+    const updateReq = new Request(
+      `http://localhost/v1/accounts/${account.id}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+        },
+        body: JSON.stringify({
+          description: "Updated metadata account",
+          planType: "free",
+          metadata: {
+            newKey: "newValue",
+          },
+        }),
+      },
+    );
+    const updateRes = await app.fetch(updateReq);
+    assertEquals(updateRes.status, 204);
+
+    // Verify update
+    const finalAccount = await testContext.db.accounts.find(account.id);
+    assertEquals(finalAccount?.value.metadata, {
+      key: "value",
+      nested: "prop-123",
+      newKey: "newValue",
+    });
+  });
+
   testContext.kv.close();
 });
 
@@ -301,6 +368,7 @@ Deno.test("Accounts API routes - Error handling", async (t) => {
         description: "Non-admin account",
         planType: "free",
         apiKey: "test-api-key-123",
+        metadata: null,
         createdAt: Date.now(),
         updatedAt: Date.now(),
         deletedAt: null,

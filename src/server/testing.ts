@@ -27,6 +27,7 @@ export async function createTestAccount(
     description: "Test account",
     planType: "free",
     apiKey,
+    metadata: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     deletedAt: null,

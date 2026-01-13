@@ -52,6 +52,7 @@ export const accountSchema = z.object({
   description: z.string().nullable(),
   planType: z.string(),
   apiKey: z.string(),
+  metadata: z.record(z.string(), z.string()).nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
   deletedAt: z.number().nullable(),
