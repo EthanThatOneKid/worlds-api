@@ -36,7 +36,7 @@ export class Accounts {
   /**
    * create creates an account in the Worlds API.
    */
-  public async create(data: CreateAccountParams): Promise<void> {
+  public async create(data: CreateAccountParams): Promise<AccountRecord> {
     const url = new URL(`${this.options.baseUrl}/accounts`);
     const response = await fetch(
       url,
@@ -54,6 +54,8 @@ export class Accounts {
         `Failed to create account: ${response.status} ${response.statusText}`,
       );
     }
+
+    return await response.json();
   }
 
   /**

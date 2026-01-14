@@ -39,7 +39,7 @@ export async function createTestAccount(
   const result = await db.accounts.add({
     id,
     description: "Test account",
-    planType: "free",
+    plan: "free",
     apiKey,
     createdAt: timestamp,
     updatedAt: timestamp,

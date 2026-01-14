@@ -93,6 +93,42 @@ Deno.test("Worlds API routes - GET operations", async (t) => {
   testContext.kv.close();
 });
 
+Deno.test("Worlds API routes - POST operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step("POST /v1/worlds creates a new world", async () => {
+    const { apiKey } = await createTestAccount(db);
+
+    const req = new Request("http://localhost/v1/worlds", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        name: "New World",
+        description: "New Description",
+        isPublic: true,
+      }),
+    });
+    const res = await app.fetch(req);
+    assertEquals(res.status, 201);
+
+    const world = await res.json();
+    assertEquals(world.name, "New World");
+    assertEquals(world.description, "New Description");
+    assertEquals(world.isPublic, true);
+    assert(typeof world.id === "string");
+    assert(typeof world.createdAt === "number");
+    assert(typeof world.updatedAt === "number");
+    assertEquals(world.deletedAt, null);
+  });
+
+  testContext.kv.close();
+});
+
 Deno.test("Worlds API routes - PUT operations", async (t) => {
   const testContext = await createTestContext();
   const { db } = testContext;

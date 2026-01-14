@@ -30,7 +30,9 @@ export default (appContext: AppContext) =>
           offset: offset,
         });
 
-        return Response.json(result.map(({ value }) => value));
+        return Response.json(
+          result.map(({ value, id }) => ({ ...value, id })),
+        );
       },
     )
     .post(
@@ -50,20 +52,31 @@ export default (appContext: AppContext) =>
         const body = await ctx.request.json();
         const apiKey = ulid();
         const timestamp = Date.now();
-        const result = await appContext.db.accounts.add({
+        const account = {
           id: body.id,
           description: body.description,
-          planType: body.planType,
+
+          plan: body.plan,
           apiKey: apiKey,
           createdAt: timestamp,
           updatedAt: timestamp,
           deletedAt: null,
-        });
-        if (!result.ok) {
-          return new Response("Failed to create account", { status: 500 });
+        };
+        try {
+          const result = await appContext.db.accounts.add(account);
+          if (!result.ok) {
+            console.error("KV Add failed:", result);
+            return new Response("Failed to create account", { status: 500 });
+          }
+        } catch (e: unknown) {
+          console.error("KV Add threw:", e);
+          const message = e instanceof Error ? e.message : "Unknown error";
+          return new Response("Failed to create account: " + message, {
+            status: 500,
+          });
         }
 
-        return Response.json(null, { status: 201 });
+        return Response.json(account, { status: 201 });
       },
     )
     .get(
@@ -90,7 +103,7 @@ export default (appContext: AppContext) =>
           return new Response("Account not found", { status: 404 });
         }
 
-        return Response.json(result.value);
+        return Response.json({ ...result.value, id: accountId });
       },
     )
     .put(
@@ -115,7 +128,7 @@ export default (appContext: AppContext) =>
         const body = await ctx.request.json();
         const result = await appContext.db.accounts.update(accountId, {
           description: body.description,
-          planType: body.planType,
+          plan: body.plan,
           updatedAt: Date.now(),
         });
         if (!result.ok) {

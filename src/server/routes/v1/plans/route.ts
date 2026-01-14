@@ -14,7 +14,9 @@ export default (appContext: AppContext) =>
         }
 
         const { result } = await appContext.db.plans.getMany();
-        return Response.json(result.map(({ value }) => value));
+        return Response.json(
+          result.map(({ value, id }) => ({ ...value, id })),
+        );
       },
     )
     .get(
@@ -40,7 +42,7 @@ export default (appContext: AppContext) =>
           return new Response("Plan not found", { status: 404 });
         }
 
-        return Response.json(result.value);
+        return Response.json({ ...result.value, id: planType });
       },
     )
     .post(
@@ -58,23 +60,24 @@ export default (appContext: AppContext) =>
         }
 
         const body = await ctx.request.json();
-        const parsed = z.string().safeParse(body.planType);
+        const parsed = z.string().safeParse(body.name);
         if (!parsed.success) {
           return new Response("Invalid plan type", { status: 400 });
         }
 
-        const planType = parsed.data;
-        const result = await appContext.db.plans.add({
-          planType,
+        const name = parsed.data;
+        const plan = {
+          name,
           quotaRequestsPerMin: body.quotaRequestsPerMin,
           quotaStorageBytes: body.quotaStorageBytes,
-        });
+        };
+        const result = await appContext.db.plans.add(plan);
 
         if (!result.ok) {
           return new Response("Failed to create plan", { status: 500 });
         }
 
-        return new Response(null, { status: 201 });
+        return Response.json({ ...plan, id: name }, { status: 201 });
       },
     )
     .put(
@@ -103,9 +106,9 @@ export default (appContext: AppContext) =>
 
         const body = await ctx.request.json();
 
-        // Validate that planType in body matches URL parameter
-        if (body.planType !== planType) {
-          return new Response("Plan type mismatch", { status: 400 });
+        // Validate that name in body matches URL parameter
+        if (body.name !== planType) {
+          return new Response("Plan name mismatch", { status: 400 });
         }
 
         // Check if plan exists, if not create it
@@ -113,13 +116,13 @@ export default (appContext: AppContext) =>
         let result;
         if (!existingPlan) {
           result = await appContext.db.plans.add({
-            planType: body.planType,
+            name: body.name,
             quotaRequestsPerMin: body.quotaRequestsPerMin,
             quotaStorageBytes: body.quotaStorageBytes,
           });
         } else {
           result = await appContext.db.plans.update(planType, {
-            planType: body.planType,
+            name: body.name,
             quotaRequestsPerMin: body.quotaRequestsPerMin,
             quotaStorageBytes: body.quotaStorageBytes,
           });

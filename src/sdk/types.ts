@@ -18,6 +18,19 @@ export type SearchResult = _SearchResult<{
 }>;
 
 /**
+ * CreateWorldParams represents the parameters for creating a world.
+ */
+export type CreateWorldParams = Omit<
+  WorldRecord,
+  "id" | "createdAt" | "updatedAt" | "deletedAt"
+>;
+
+/**
+ * UpdateWorldParams represents the parameters for updating a world.
+ */
+export type UpdateWorldParams = Partial<CreateWorldParams>;
+
+/**
  * WorldRecord represents a world in the Worlds API.
  */
 export interface WorldRecord {

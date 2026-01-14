@@ -1,5 +1,7 @@
 import type {
+  CreateWorldParams,
   SearchResult,
+  UpdateWorldParams,
   UsageBucketRecord,
   WorldRecord,
   WorldsOptions,
@@ -63,7 +65,7 @@ export class Worlds {
   /**
    * create creates a world in the Worlds API.
    */
-  public async create(data: WorldRecord): Promise<void> {
+  public async create(data: CreateWorldParams): Promise<WorldRecord> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
     const response = await fetch(
       url,
@@ -81,12 +83,14 @@ export class Worlds {
         `Failed to create world: ${response.status} ${response.statusText}`,
       );
     }
+
+    return await response.json();
   }
 
   /**
    * update updates a world in the Worlds API.
    */
-  public async update(worldId: string, data: WorldRecord): Promise<void> {
+  public async update(worldId: string, data: UpdateWorldParams): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
     const response = await fetch(
       url,

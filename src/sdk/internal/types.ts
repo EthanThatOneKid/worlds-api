@@ -4,7 +4,7 @@
 export interface AccountRecord {
   id: string;
   description: string | null;
-  planType: string;
+  plan: string | null;
   apiKey: string;
   createdAt: number;
   updatedAt: number;
@@ -16,14 +16,14 @@ export interface AccountRecord {
  */
 export type CreateAccountParams = Omit<
   AccountRecord,
-  "apiKey" | "createdAt" | "updatedAt" | "deletedAt"
+  "id" | "apiKey" | "createdAt" | "updatedAt" | "deletedAt"
 >;
 
 /**
  * PlanRecord represents a subscription plan.
  */
 export interface PlanRecord {
-  planType: string;
+  name: string;
   quotaRequestsPerMin: number;
   quotaStorageBytes: number;
 }

@@ -28,7 +28,7 @@ export default (appContext: AppContext) => {
 
         // TODO: Respond with different formats based on the relevant HTTP header.
 
-        return Response.json(result.value);
+        return Response.json({ ...result.value, id: worldId });
       },
     )
     .put(
@@ -127,7 +127,9 @@ export default (appContext: AppContext) => {
           },
         );
 
-        return Response.json(result.map(({ value }) => value));
+        return Response.json(
+          result.map(({ value, id }) => ({ ...value, id })),
+        );
       },
     )
     .post(
@@ -146,14 +148,16 @@ export default (appContext: AppContext) => {
         }
 
         const now = Date.now();
-        const result = await appContext.db.worlds.add({
+        const world = {
           accountId: authorized.account.id,
           name: body.name,
           description: body.description,
           createdAt: now,
           updatedAt: now,
           deletedAt: null,
-        });
+          isPublic: body.isPublic ?? false,
+        };
+        const result = await appContext.db.worlds.add(world);
 
         if (!result.ok) {
           return Response.json({ error: "Failed to create world" }, {
@@ -161,7 +165,7 @@ export default (appContext: AppContext) => {
           });
         }
 
-        return Response.json(null, { status: 201 });
+        return Response.json({ ...world, id: result.id }, { status: 201 });
       },
     );
 };

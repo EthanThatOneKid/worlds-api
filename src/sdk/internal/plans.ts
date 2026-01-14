@@ -33,7 +33,7 @@ export class Plans {
    */
   public async create(
     data: PlanRecord,
-  ): Promise<void> {
+  ): Promise<PlanRecord> {
     const url = new URL(`${this.options.baseUrl}/plans`);
     const response = await fetch(
       url,
@@ -51,6 +51,8 @@ export class Plans {
         `Failed to create plan: ${response.status} ${response.statusText}`,
       );
     }
+
+    return await response.json();
   }
 
   /**

@@ -13,7 +13,7 @@ Deno.test("Plans API routes - GET operations", async (t) => {
 
     // Create a plan directly using db.set() since planType is the primary key
     const result = await db.plans.set("free", {
-      planType: "free",
+      name: "free",
       quotaRequestsPerMin: 60,
       quotaStorageBytes: 104857600,
     });
@@ -39,7 +39,7 @@ Deno.test("Plans API routes - GET operations", async (t) => {
     assertEquals(res.status, 200);
 
     const plan = await res.json();
-    assertEquals(plan.planType, "free");
+    assertEquals(plan.name, "free");
     assertEquals(plan.quotaRequestsPerMin, 60);
     assertEquals(plan.quotaStorageBytes, 104857600);
   });
@@ -75,6 +75,40 @@ Deno.test("Plans API routes - GET operations", async (t) => {
   testContext.kv.close();
 });
 
+Deno.test("Plans API routes - POST operations", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step("POST /v1/plans creates a new plan", async () => {
+    // Delete if exists
+    await db.plans.delete("enterprise");
+
+    const req = new Request("http://localhost/v1/plans", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${testContext.admin!.apiKey}`,
+      },
+      body: JSON.stringify({
+        name: "enterprise",
+        quotaRequestsPerMin: 1000,
+        quotaStorageBytes: 1073741824,
+      }),
+    });
+    const res = await app.fetch(req);
+    assertEquals(res.status, 201);
+
+    const plan = await res.json();
+    assertEquals(plan.name, "enterprise");
+    assertEquals(plan.quotaRequestsPerMin, 1000);
+    assertEquals(plan.quotaStorageBytes, 1073741824);
+    assertEquals(plan.id, "enterprise");
+  });
+
+  testContext.kv.close();
+});
+
 Deno.test("Plans API routes - PUT operations", async (t) => {
   const testContext = await createTestContext();
   const { db } = testContext;
@@ -86,7 +120,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
 
     // First create a plan
     const createResult = await db.plans.set("pro", {
-      planType: "pro",
+      name: "pro",
       quotaRequestsPerMin: 100,
       quotaStorageBytes: 209715200,
     });
@@ -103,7 +137,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
         "Authorization": `Bearer ${testContext.admin!.apiKey}`,
       },
       body: JSON.stringify({
-        planType: "pro",
+        name: "pro",
         quotaRequestsPerMin: 200,
         quotaStorageBytes: 419430400,
       }),
@@ -139,7 +173,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
           "Authorization": `Bearer ${testContext.admin!.apiKey}`,
         },
         body: JSON.stringify({
-          planType: "free",
+          name: "free",
           quotaRequestsPerMin: 50,
           quotaStorageBytes: 52428800,
         }),
@@ -173,7 +207,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
           "Authorization": "Bearer invalid-token",
         },
         body: JSON.stringify({
-          planType: "free",
+          name: "free",
           quotaRequestsPerMin: 60,
           quotaStorageBytes: 104857600,
         }),
@@ -190,7 +224,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
       const createResult = await db.accounts.add({
         id: "acc_plans_test",
         description: "Test account",
-        planType: "free",
+        plan: "free",
         apiKey: "test-api-key-456",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -208,7 +242,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
           "Authorization": "Bearer test-api-key-456",
         },
         body: JSON.stringify({
-          planType: "free",
+          name: "free",
           quotaRequestsPerMin: 60,
           quotaStorageBytes: 104857600,
         }),
@@ -228,7 +262,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
           "Authorization": `Bearer ${testContext.admin!.apiKey}`,
         },
         body: JSON.stringify({
-          planType: "pro",
+          name: "pro",
           quotaRequestsPerMin: 60,
           quotaStorageBytes: 104857600,
         }),
@@ -246,7 +280,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
 
       // Create a plan
       const createResult = await db.plans.set("pro", {
-        planType: "pro",
+        name: "pro",
         quotaRequestsPerMin: 100,
         quotaStorageBytes: 209715200,
       });
@@ -263,7 +297,7 @@ Deno.test("Plans API routes - PUT operations", async (t) => {
           "Authorization": `Bearer ${testContext.admin!.apiKey}`,
         },
         body: JSON.stringify({
-          planType: "pro",
+          name: "pro",
           quotaRequestsPerMin: 150,
           quotaStorageBytes: 314572800,
           allowReasoning: true, // This should be ignored

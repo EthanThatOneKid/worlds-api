@@ -29,7 +29,7 @@ export function createWorldsKvdex(kv: Deno.Kv) {
         },
       }),
       plans: collection(planSchema, {
-        idGenerator: (plan) => plan.planType,
+        idGenerator: (plan) => plan.name,
       }),
       worlds: collection(worldSchema, {
         indices: {
@@ -46,7 +46,7 @@ export function createWorldsKvdex(kv: Deno.Kv) {
 export type Plan = z.infer<typeof planSchema>;
 
 export const planSchema = z.object({
-  planType: z.string(),
+  name: z.string(),
   quotaRequestsPerMin: z.number().default(60),
   quotaStorageBytes: z.number().default(104857600),
 });
@@ -56,7 +56,7 @@ export type Account = z.infer<typeof accountSchema>;
 export const accountSchema = z.object({
   id: z.string(),
   description: z.string().nullable(),
-  planType: z.string(),
+  plan: z.string().nullable(),
   apiKey: z.string(),
   createdAt: z.number(),
   updatedAt: z.number(),

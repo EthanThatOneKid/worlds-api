@@ -13,7 +13,7 @@ Deno.test("Accounts API routes", async (t) => {
       const account1 = await testContext.db.accounts.add({
         id: "acc_1",
         description: "Test account 1",
-        planType: "free",
+        plan: "free",
         apiKey: ulid(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -23,7 +23,7 @@ Deno.test("Accounts API routes", async (t) => {
       const account2 = await testContext.db.accounts.add({
         id: "acc_2",
         description: "Test account 2",
-        planType: "pro",
+        plan: "pro",
         apiKey: ulid(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -69,14 +69,16 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       body: JSON.stringify({
         id: "acc_new",
         description: "Test account",
-        planType: "free",
+        plan: "free",
       }),
     });
     const res = await app.fetch(req);
     assertEquals(res.status, 201);
 
     const body = await res.json();
-    assertEquals(body, null);
+    assertEquals(body.id, "acc_new");
+    assertEquals(body.description, "Test account");
+    assertEquals(body.plan, "free");
   });
 
   await t.step("GET /v1/accounts/:account retrieves an account", async () => {
@@ -84,7 +86,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
     const result = await testContext.db.accounts.add({
       id: "acc_get",
       description: "Test account 2",
-      planType: "pro",
+      plan: "pro",
       apiKey: ulid(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -112,7 +114,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
 
     const account = await res.json();
     assertEquals(account.description, "Test account 2");
-    assertEquals(account.planType, "pro");
+    assertEquals(account.plan, "pro");
     assertEquals(typeof account.apiKey, "string");
     assertEquals(typeof account.createdAt, "number");
     assertEquals(typeof account.updatedAt, "number");
@@ -123,7 +125,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
     const createResult = await testContext.db.accounts.add({
       id: "acc_put",
       description: "Original description",
-      planType: "free",
+      plan: "free",
       apiKey: ulid(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -147,7 +149,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
         },
         body: JSON.stringify({
           description: "Updated description",
-          planType: "pro",
+          plan: "pro",
         }),
       },
     );
@@ -168,7 +170,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
     );
     const account = await getRes.json();
     assertEquals(account.description, "Updated description");
-    assertEquals(account.planType, "pro");
+    assertEquals(account.plan, "pro");
   });
 
   await t.step("DELETE /v1/accounts/:account removes an account", async () => {
@@ -176,7 +178,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
     const createResult = await testContext.db.accounts.add({
       id: "acc_del",
       description: "To be deleted",
-      planType: "free",
+      plan: "free",
       apiKey: ulid(),
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -224,7 +226,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       const createResult = await testContext.db.accounts.add({
         id: "acc_rot",
         description: "Account to rotate",
-        planType: "free",
+        plan: "free",
         apiKey: ulid(),
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -297,7 +299,8 @@ Deno.test("Accounts API routes - Error handling", async (t) => {
       },
       body: JSON.stringify({
         description: "Test account",
-        planType: "free",
+        plan: "free",
+        apiKey: ulid(),
       }),
     });
     const res = await app.fetch(req);
@@ -311,7 +314,7 @@ Deno.test("Accounts API routes - Error handling", async (t) => {
       const createResult = await testContext.db.accounts.add({
         id: "acc_no_admin",
         description: "Non-admin account",
-        planType: "free",
+        plan: "free",
         apiKey: "test-api-key-123",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -331,7 +334,8 @@ Deno.test("Accounts API routes - Error handling", async (t) => {
         body: JSON.stringify({
           id: "acc_fail",
           description: "Test account",
-          planType: "free",
+          plan: "free",
+          apiKey: ulid(),
         }),
       });
       const res = await app.fetch(req);
@@ -374,7 +378,8 @@ Deno.test("Accounts API routes - Edge cases", async (t) => {
         body: JSON.stringify({
           id: "acc_dup_1",
           description: "Duplicate description test",
-          planType: "free",
+          plan: "free",
+          apiKey: ulid(),
         }),
       });
       const res1 = await app.fetch(req1);
@@ -389,7 +394,8 @@ Deno.test("Accounts API routes - Edge cases", async (t) => {
         body: JSON.stringify({
           id: "acc_dup_2",
           description: "Duplicate description test",
-          planType: "free",
+          plan: "free",
+          apiKey: ulid(),
         }),
       });
       const res2 = await app.fetch(req2);
