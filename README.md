@@ -13,8 +13,8 @@ agent.
 
 **Bring your own brain (BYOB).** Worlds API™ is agnostic to the agent using it.
 
-**Powered by N3.** Worlds API™ leverages N3 for high-performance store
-operations.
+**Powered by N3.** Worlds API™ leverages [N3](https://github.com/rdfjs/N3.js)
+for high-performance store operations.
 
 ## Usage
 
