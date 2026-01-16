@@ -223,3 +223,249 @@ Deno.test("InternalWorlds - Worlds", async (t) => {
 
   appContext.kv.close();
 });
+
+Deno.test("InternalWorlds - Admin Account Override", async (t) => {
+  const appContext = await createTestContext();
+  const server = await createServer(appContext);
+
+  // Create SDK with admin API key
+  const adminSdk = new InternalWorlds({
+    baseUrl: "http://localhost/v1",
+    apiKey: appContext.admin!.apiKey,
+    fetch: (url, init) => server.fetch(new Request(url, init)),
+  });
+
+  // Create two test accounts
+  const accountA = await createTestAccount(appContext.db);
+  const accountB = await createTestAccount(appContext.db);
+
+  await t.step("admin can list worlds for specific account", async () => {
+    // Create worlds for both accounts directly in DB
+    await appContext.db.worlds.add({
+      accountId: accountA.id,
+      name: "Account A World",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+
+    await appContext.db.worlds.add({
+      accountId: accountB.id,
+      name: "Account B World",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+
+    // List worlds for Account A using admin override
+    const worldsA = await adminSdk.worlds.list(1, 20, {
+      accountId: accountA.id,
+    });
+    assertEquals(worldsA.length, 1);
+    assertEquals(worldsA[0].name, "Account A World");
+    assertEquals(worldsA[0].accountId, accountA.id);
+
+    // List worlds for Account B using admin override
+    const worldsB = await adminSdk.worlds.list(1, 20, {
+      accountId: accountB.id,
+    });
+    assertEquals(worldsB.length, 1);
+    assertEquals(worldsB[0].name, "Account B World");
+    assertEquals(worldsB[0].accountId, accountB.id);
+  });
+
+  await t.step("admin can create world for specific account", async () => {
+    const world = await adminSdk.worlds.create({
+      accountId: accountA.id, // This will be ignored
+      name: "Admin Created World",
+      description: "Created via admin override",
+      isPublic: false,
+    }, { accountId: accountB.id }); // This accountId takes precedence
+
+    assertEquals(world.accountId, accountB.id);
+    assertEquals(world.name, "Admin Created World");
+
+    // Verify in database
+    const dbWorld = await appContext.db.worlds.find(world.id);
+    assert(dbWorld);
+    assertEquals(dbWorld.value.accountId, accountB.id);
+  });
+
+  await t.step("admin can get world for specific account", async () => {
+    // Create a world for Account A
+    const result = await appContext.db.worlds.add({
+      accountId: accountA.id,
+      name: "Test World",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+    assert(result.ok);
+
+    // Get world using admin override
+    const world = await adminSdk.worlds.get(result.id, {
+      accountId: accountA.id,
+    });
+    assert(world !== null);
+    assertEquals(world.accountId, accountA.id);
+  });
+
+  await t.step("admin can update world for specific account", async () => {
+    // Create a world for Account A
+    const result = await appContext.db.worlds.add({
+      accountId: accountA.id,
+      name: "Original Name",
+      description: "Original",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+    assert(result.ok);
+
+    // Update using admin override
+    await adminSdk.worlds.update(result.id, {
+      description: "Updated via admin",
+    }, { accountId: accountA.id });
+
+    // Verify update
+    const world = await adminSdk.worlds.get(result.id, {
+      accountId: accountA.id,
+    });
+    assert(world !== null);
+    assertEquals(world.description, "Updated via admin");
+  });
+
+  await t.step("admin can delete world for specific account", async () => {
+    // Create a world for Account B
+    const result = await appContext.db.worlds.add({
+      accountId: accountB.id,
+      name: "To Delete",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+    assert(result.ok);
+
+    // Delete using admin override
+    await adminSdk.worlds.remove(result.id, { accountId: accountB.id });
+
+    // Verify deletion
+    const world = await appContext.db.worlds.find(result.id);
+    assertEquals(world, null);
+  });
+
+  await t.step(
+    "admin SPARQL operations claim usage for specific account",
+    async () => {
+      // Create a world for Account A
+      const result = await appContext.db.worlds.add({
+        accountId: accountA.id,
+        name: "SPARQL Test World",
+        description: "Test",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+        isPublic: false,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Perform SPARQL update using admin override
+      await adminSdk.worlds.sparqlUpdate(
+        worldId,
+        'INSERT DATA { <http://example.org/s> <http://example.org/p> "Admin Object" . }',
+        { accountId: accountA.id },
+      );
+
+      // Perform SPARQL query using admin override
+      const queryResult = await adminSdk.worlds.sparqlQuery(
+        worldId,
+        "SELECT * WHERE { ?s ?p ?o }",
+        { accountId: accountA.id },
+        // deno-lint-ignore no-explicit-any
+      ) as any;
+
+      assert(queryResult.results.bindings.length > 0);
+
+      // Verify usage is attributed to Account A
+      // Note: Only SPARQL queries track usage, not updates
+      const { result: buckets } = await appContext.db.usageBuckets
+        .findBySecondaryIndex(
+          "worldId",
+          worldId,
+        );
+      assert(buckets.length >= 1, "Expected at least one usage bucket");
+      const bucket = buckets.find((b) => b.value.accountId === accountA.id);
+      assert(bucket !== undefined, "Expected usage bucket for Account A");
+      assert(
+        bucket.value.requestCount >= 1,
+        "Expected at least 1 request (query)",
+      ); // Only the query tracks usage
+    },
+  );
+
+  await t.step("admin can get usage for specific account", async () => {
+    // Create a world for Account B
+    const result = await appContext.db.worlds.add({
+      accountId: accountB.id,
+      name: "Usage Test World",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+    assert(result.ok);
+    const worldId = result.id;
+
+    // Seed usage data
+    await appContext.db.usageBuckets.set("usage_test_bucket", {
+      accountId: accountB.id,
+      worldId,
+      bucketStartTs: Date.now(),
+      requestCount: 100,
+    });
+
+    // Get usage using admin override
+    const usage = await adminSdk.worlds.getUsage(worldId, {
+      accountId: accountB.id,
+    });
+    assert(usage.length >= 1);
+    const bucket = usage.find((u) => u.id === "usage_test_bucket");
+    assert(bucket !== undefined);
+    assertEquals(bucket.requestCount, 100);
+  });
+
+  await t.step("admin can search world for specific account", async () => {
+    // Create a world for Account A
+    const result = await appContext.db.worlds.add({
+      accountId: accountA.id,
+      name: "Search Test World",
+      description: "Test",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      deletedAt: null,
+      isPublic: false,
+    });
+    assert(result.ok);
+
+    // Search using admin override (won't return meaningful results without embeddings, but verifies no crash)
+    const searchResults = await adminSdk.worlds.search(
+      result.id,
+      "test query",
+      { accountId: accountA.id },
+    );
+    assert(Array.isArray(searchResults));
+  });
+
+  appContext.kv.close();
+});

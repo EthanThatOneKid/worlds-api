@@ -22,10 +22,14 @@ export class Worlds {
   /**
    * list paginates all worlds from the Worlds API.
    */
-  public async list(page = 1, pageSize = 20): Promise<WorldRecord[]> {
+  public async list(
+    page = 1,
+    pageSize = 20,
+    options?: { accountId?: string },
+  ): Promise<WorldRecord[]> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     url.searchParams.set("page", page.toString());
@@ -47,10 +51,13 @@ export class Worlds {
   /**
    * get gets a world from the Worlds API.
    */
-  public async get(worldId: string): Promise<WorldRecord | null> {
+  public async get(
+    worldId: string,
+    options?: { accountId?: string },
+  ): Promise<WorldRecord | null> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -77,10 +84,13 @@ export class Worlds {
   /**
    * create creates a world in the Worlds API.
    */
-  public async create(data: CreateWorldParams): Promise<WorldRecord> {
+  public async create(
+    data: CreateWorldParams,
+    options?: { accountId?: string },
+  ): Promise<WorldRecord> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -106,10 +116,14 @@ export class Worlds {
   /**
    * update updates a world in the Worlds API.
    */
-  public async update(worldId: string, data: UpdateWorldParams): Promise<void> {
+  public async update(
+    worldId: string,
+    data: UpdateWorldParams,
+    options?: { accountId?: string },
+  ): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -133,10 +147,13 @@ export class Worlds {
   /**
    * remove removes a world from the Worlds API.
    */
-  public async remove(worldId: string): Promise<void> {
+  public async remove(
+    worldId: string,
+    options?: { accountId?: string },
+  ): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -164,12 +181,13 @@ export class Worlds {
   public async sparqlQuery(
     worldId: string,
     query: string,
+    options?: { accountId?: string },
   ): Promise<unknown> {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/sparql`,
     );
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -203,12 +221,13 @@ export class Worlds {
   public async sparqlUpdate(
     worldId: string,
     update: string,
+    options?: { accountId?: string },
   ): Promise<void> {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/sparql`,
     );
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -232,12 +251,15 @@ export class Worlds {
   /**
    * getUsage gets the usage for a specific world.
    */
-  public async getUsage(worldId: string): Promise<UsageBucketRecord[]> {
+  public async getUsage(
+    worldId: string,
+    options?: { accountId?: string },
+  ): Promise<UsageBucketRecord[]> {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/usage`,
     );
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     const response = await this.fetch(
@@ -265,11 +287,12 @@ export class Worlds {
     options?: {
       limit?: number;
       offset?: number;
+      accountId?: string;
     },
   ): Promise<SearchResult> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}/search`);
-    if (this.options.account) {
-      url.searchParams.set("account", this.options.account);
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
     }
 
     url.searchParams.set("q", query);
@@ -311,37 +334,46 @@ export class World {
   /**
    * get gets the world.
    */
-  public get(): Promise<WorldRecord | null> {
-    return this.worlds.get(this.options.worldId);
+  public get(options?: { accountId?: string }): Promise<WorldRecord | null> {
+    return this.worlds.get(this.options.worldId, options);
   }
 
   /**
    * remove removes the world.
    */
-  public remove(): Promise<void> {
-    return this.worlds.remove(this.options.worldId);
+  public remove(options?: { accountId?: string }): Promise<void> {
+    return this.worlds.remove(this.options.worldId, options);
   }
 
   /**
    * update updates the world.
    */
-  public update(data: WorldRecord): Promise<void> {
-    return this.worlds.update(this.options.worldId, data);
+  public update(
+    data: WorldRecord,
+    options?: { accountId?: string },
+  ): Promise<void> {
+    return this.worlds.update(this.options.worldId, data, options);
   }
 
   /**
    * sparqlQuery executes a SPARQL query against the world.
    */
-  // deno-lint-ignore no-explicit-any
-  public sparqlQuery(query: string): Promise<any> {
-    return this.worlds.sparqlQuery(this.options.worldId, query);
+  public sparqlQuery(
+    query: string,
+    options?: { accountId?: string },
+    // deno-lint-ignore no-explicit-any
+  ): Promise<any> {
+    return this.worlds.sparqlQuery(this.options.worldId, query, options);
   }
 
   /**
    * sparqlUpdate executes a SPARQL update against the world.
    */
-  public sparqlUpdate(update: string): Promise<void> {
-    return this.worlds.sparqlUpdate(this.options.worldId, update);
+  public sparqlUpdate(
+    update: string,
+    options?: { accountId?: string },
+  ): Promise<void> {
+    return this.worlds.sparqlUpdate(this.options.worldId, update, options);
   }
 
   /**
@@ -352,6 +384,7 @@ export class World {
     options?: {
       limit?: number;
       offset?: number;
+      accountId?: string;
     },
   ): Promise<SearchResult> {
     return this.worlds.search(this.options.worldId, query, options);
