@@ -476,3 +476,54 @@ Deno.test("SPARQL API routes - Method validation", async (t) => {
 
   testContext.kv.close();
 });
+
+Deno.test("SPARQL API routes - Usage Tracking", async (t) => {
+  const testContext = await createTestContext();
+  const { db } = testContext;
+  const app = createRoute(testContext);
+
+  await t.step(
+    "SPARQL requests track usage",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        name: "Usage Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        deletedAt: null,
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Make a request
+      const query = encodeURIComponent("SELECT ?s WHERE { ?s ?p ?o }");
+      const req = new Request(
+        `http://localhost/v1/worlds/${worldId}/sparql?query=${query}`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        },
+      );
+
+      const res = await app.fetch(req);
+      assertEquals(res.status, 200);
+
+      // Verify usage bucket
+      // We don't know the exact bucket ID (it's time based), but we can query by secondary index
+      const { result: buckets } = await db.usageBuckets.findBySecondaryIndex(
+        "worldId",
+        worldId,
+      );
+
+      assert(buckets.length > 0);
+      assertEquals(buckets[0].value.requestCount, 1);
+      assertEquals(buckets[0].value.accountId, accountId);
+    },
+  );
+
+  testContext.kv.close();
+});

@@ -6,6 +6,7 @@ import type { AppContext } from "#/server/app-context.ts";
 import type { DatasetParams } from "#/server/db/sparql.ts";
 import { sparql } from "#/server/db/sparql.ts";
 import { LibsqlSearchStore } from "#/server/search/libsql.ts";
+import { incrementRequestCount } from "#/server/usage.ts";
 
 const { namedNode, quad } = DataFactory;
 
@@ -151,6 +152,7 @@ async function executeSparqlRequest(
   appContext: AppContext,
   request: Request,
   worldId: string,
+  accountId?: string,
 ): Promise<Response> {
   const { query } = await parseQuery(request);
 
@@ -203,15 +205,6 @@ async function executeSparqlRequest(
     searchStore,
   );
 
-  // Track usage
-  const authorized = await authorizeRequest(appContext, request);
-  // We already authorized before calling this function, but we need the account ID if available.
-  // Actually, the route handler checks authorization.
-  // We can pass the accountId to executeSparqlRequest to avoid re-authorizing or just look it up.
-  // But wait, executeSparqlRequest is called *after* authorization in the route handlers.
-  // The route handler has the `authorized` object which contains the account.
-  // Let's modify executeSparqlRequest signature to accept accountId.
-
   // For updates, return 204 instead of the stream response
   if (isUpdate) {
     // Persist new blob. If the world doesn't exist, create it.
@@ -223,6 +216,10 @@ async function executeSparqlRequest(
     }
 
     return new Response(null, { status: 204 });
+  }
+
+  if (accountId) {
+    await incrementRequestCount(appContext, accountId, worldId);
   }
 
   // For queries, return the stream response
@@ -256,7 +253,12 @@ export default (appContext: AppContext) => {
         }
 
         try {
-          return await executeSparqlRequest(appContext, ctx.request, worldId);
+          return await executeSparqlRequest(
+            appContext,
+            ctx.request,
+            worldId,
+            authorized.account?.id,
+          );
         } catch (error) {
           console.error("SPARQL query error:", error);
           return Response.json(
@@ -303,7 +305,12 @@ export default (appContext: AppContext) => {
         }
 
         try {
-          return await executeSparqlRequest(appContext, ctx.request, worldId);
+          return await executeSparqlRequest(
+            appContext,
+            ctx.request,
+            worldId,
+            authorized.account?.id,
+          );
         } catch (error) {
           console.error("SPARQL query/update error:", error);
           return Response.json(
