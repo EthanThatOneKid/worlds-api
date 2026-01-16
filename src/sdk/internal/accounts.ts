@@ -5,9 +5,13 @@ import type { AccountRecord, CreateAccountParams } from "./types.ts";
  * Accounts is a TypeScript SDK for the Accounts API.
  */
 export class Accounts {
+  private readonly fetch: typeof fetch;
+
   public constructor(
     public readonly options: WorldsOptions,
-  ) {}
+  ) {
+    this.fetch = options.fetch ?? globalThis.fetch;
+  }
 
   /**
    * list paginates accounts from the Worlds API.
@@ -19,7 +23,7 @@ export class Accounts {
     const url = new URL(`${this.options.baseUrl}/accounts`);
     url.searchParams.set("page", page.toString());
     url.searchParams.set("pageSize", pageSize.toString());
-    const response = await fetch(url, {
+    const response = await this.fetch(url, {
       headers: {
         Authorization: `Bearer ${this.options.apiKey}`,
       },
@@ -38,7 +42,7 @@ export class Accounts {
    */
   public async create(data: CreateAccountParams): Promise<AccountRecord> {
     const url = new URL(`${this.options.baseUrl}/accounts`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",
@@ -65,7 +69,7 @@ export class Accounts {
     accountId: string,
   ): Promise<AccountRecord | null> {
     const url = new URL(`${this.options.baseUrl}/accounts/${accountId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         headers: {
@@ -94,7 +98,7 @@ export class Accounts {
     data: Partial<AccountRecord>,
   ): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/accounts/${accountId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "PUT",
@@ -117,7 +121,7 @@ export class Accounts {
    */
   public async delete(accountId: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/accounts/${accountId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "DELETE",
@@ -140,7 +144,7 @@ export class Accounts {
     const url = new URL(
       `${this.options.baseUrl}/accounts/${accountId}/rotate`,
     );
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",

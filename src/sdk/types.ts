@@ -8,6 +8,13 @@ import type { SearchResult as _SearchResult } from "@fartlabs/search-store";
 export interface WorldsOptions {
   baseUrl: string;
   apiKey: string;
+
+  /**
+   * fetch fetches a resource from the network. It returns a `Promise` that
+   * resolves to the `Response` to that `Request`, whether it is successful
+   * or not.
+   */
+  fetch?: typeof globalThis.fetch;
 }
 
 // TODO: Update SearchResultItem type for consistency with RDF/JS term types.

@@ -11,9 +11,13 @@ import type {
  * Worlds is a TypeScript SDK for the Worlds API.
  */
 export class Worlds {
+  private readonly fetch: typeof fetch;
+
   public constructor(
     public readonly options: WorldsOptions,
-  ) {}
+  ) {
+    this.fetch = options.fetch ?? globalThis.fetch;
+  }
 
   /**
    * list paginates all worlds from the Worlds API.
@@ -22,7 +26,7 @@ export class Worlds {
     const url = new URL(`${this.options.baseUrl}/worlds`);
     url.searchParams.set("page", page.toString());
     url.searchParams.set("pageSize", pageSize.toString());
-    const response = await fetch(url, {
+    const response = await this.fetch(url, {
       headers: {
         Authorization: `Bearer ${this.options.apiKey}`,
       },
@@ -41,7 +45,7 @@ export class Worlds {
    */
   public async get(worldId: string): Promise<WorldRecord | null> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         headers: {
@@ -67,7 +71,7 @@ export class Worlds {
    */
   public async create(data: CreateWorldParams): Promise<WorldRecord> {
     const url = new URL(`${this.options.baseUrl}/worlds`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",
@@ -92,7 +96,7 @@ export class Worlds {
    */
   public async update(worldId: string, data: UpdateWorldParams): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "PUT",
@@ -115,7 +119,7 @@ export class Worlds {
    */
   public async remove(worldId: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "DELETE",
@@ -144,7 +148,7 @@ export class Worlds {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/sparql`,
     );
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",
@@ -179,7 +183,7 @@ export class Worlds {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/sparql`,
     );
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",
@@ -204,7 +208,7 @@ export class Worlds {
     const url = new URL(
       `${this.options.baseUrl}/worlds/${worldId}/usage`,
     );
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         headers: {
@@ -241,7 +245,7 @@ export class Worlds {
       url.searchParams.set("offset", options.offset.toString());
     }
 
-    const response = await fetch(url, {
+    const response = await this.fetch(url, {
       headers: {
         Authorization: `Bearer ${this.options.apiKey}`,
       },

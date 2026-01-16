@@ -1,58 +1,14 @@
-import { Router } from "@fartlabs/rt";
-import { createClient } from "@libsql/client";
-import { GoogleGenAI } from "@google/genai";
-import type { AppContext } from "./app-context.ts";
-import { createWorldsKvdex } from "./db/kvdex.ts";
-import { GeminiEmbeddings } from "./embeddings/gemini.ts";
+import { createAppContext, createServer } from "./server.ts";
 
-const kv = await Deno.openKv(Deno.env.get("DENO_KV_PATH"));
-const db = createWorldsKvdex(kv);
-
-const libsqlClient = createClient({
-  url: Deno.env.get("LIBSQL_URL")!,
-  authToken: Deno.env.get("LIBSQL_AUTH_TOKEN")!,
+const appContext = await createAppContext({
+  LIBSQL_URL: Deno.env.get("LIBSQL_URL")!,
+  LIBSQL_AUTH_TOKEN: Deno.env.get("LIBSQL_AUTH_TOKEN")!,
+  GOOGLE_API_KEY: Deno.env.get("GOOGLE_API_KEY")!,
+  GOOGLE_EMBEDDINGS_MODEL: Deno.env.get("GOOGLE_EMBEDDINGS_MODEL")!,
+  ADMIN_API_KEY: Deno.env.get("ADMIN_API_KEY")!,
 });
 
-const googleGenAI = new GoogleGenAI({
-  apiKey: Deno.env.get("GOOGLE_API_KEY")!,
-});
-
-const embeddings = new GeminiEmbeddings({
-  client: googleGenAI,
-  dimensions: 768,
-
-  // https://ai.google.dev/gemini-api/docs/embeddings#model-versions
-  model: "models/gemini-embedding-001",
-});
-
-const apiKey = Deno.env.get("ADMIN_API_KEY");
-if (!apiKey) {
-  throw new Error("ADMIN_API_KEY is not set");
-}
-
-const appContext: AppContext = {
-  kv,
-  db,
-  embeddings,
-  libsqlClient,
-  admin: { apiKey },
-};
-
-const routes = [
-  "routes/v1/accounts/route.ts",
-  "routes/v1/plans/route.ts",
-  "routes/v1/worlds/route.ts",
-  "routes/v1/worlds/sparql/route.ts",
-  "routes/v1/worlds/search/route.ts",
-  "routes/v1/worlds/usage/route.ts",
-];
-
-const app = new Router();
-
-for (const specifier of routes) {
-  const module = await import(`./${specifier}`);
-  app.use(module.default(appContext));
-}
+const app = await createServer(appContext);
 
 export default {
   fetch: (request: Request) => app.fetch(request),

@@ -5,16 +5,20 @@ import type { PlanRecord } from "./types.ts";
  * Plans is a TypeScript SDK for the Plans API.
  */
 export class Plans {
+  private readonly fetch: typeof fetch;
+
   public constructor(
     public readonly options: WorldsOptions,
-  ) {}
+  ) {
+    this.fetch = options.fetch ?? globalThis.fetch;
+  }
 
   /**
    * list lists all plans from the Worlds API.
    */
   public async list(): Promise<PlanRecord[]> {
     const url = new URL(`${this.options.baseUrl}/plans`);
-    const response = await fetch(url, {
+    const response = await this.fetch(url, {
       headers: {
         Authorization: `Bearer ${this.options.apiKey}`,
       },
@@ -35,7 +39,7 @@ export class Plans {
     data: PlanRecord,
   ): Promise<PlanRecord> {
     const url = new URL(`${this.options.baseUrl}/plans`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "POST",
@@ -65,7 +69,7 @@ export class Plans {
       return null;
     }
     const url = new URL(`${this.options.baseUrl}/plans/${planType}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         headers: {
@@ -94,7 +98,7 @@ export class Plans {
     data: PlanRecord,
   ): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/plans/${planType}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "PUT",
@@ -117,7 +121,7 @@ export class Plans {
    */
   public async delete(planType: string): Promise<void> {
     const url = new URL(`${this.options.baseUrl}/plans/${planType}`);
-    const response = await fetch(
+    const response = await this.fetch(
       url,
       {
         method: "DELETE",
