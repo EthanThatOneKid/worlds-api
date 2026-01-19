@@ -1,8 +1,12 @@
+import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import type { FactSearchEngine } from "./fact-search-engine.ts";
+import type { World } from "#/sdk/worlds.ts";
 
-export function createSearchFactsTool(searchEngine: FactSearchEngine) {
+/**
+ * createSearchFactsTool creates a search facts tool for a world.
+ */
+export function createSearchFactsTool(world: World): Tool {
   return tool({
     description:
       "Search for facts in the knowledge base using full-text and vector search. Use this to find entities when you don't know their exact IRI or to explore broad topics.",
@@ -15,7 +19,7 @@ export function createSearchFactsTool(searchEngine: FactSearchEngine) {
       ),
     }),
     execute: async ({ query, limit }) => {
-      return await searchEngine.searchFacts(query, limit ?? 10);
+      return await world.search(query, { limit: limit ?? 10 });
     },
   });
 }

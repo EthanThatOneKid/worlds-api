@@ -1,54 +1,100 @@
-import type { Worlds } from "#/sdk/worlds.ts";
-import { createQuerySparqlTool } from "./query-sparql/tool.ts";
-import { createUpdateSparqlTool } from "./update-sparql/tool.ts";
-import type { FactSearchEngine } from "./search-facts/fact-search-engine.ts";
+import type { Tool } from "ai";
+import { ulid } from "@std/ulid/ulid";
+import type { World } from "#/sdk/worlds.ts";
+import { createExecuteSparqlTool } from "./execute-sparql/tool.ts";
 import { createSearchFactsTool } from "./search-facts/tool.ts";
-import type { IriGenerator } from "./generate-iri/iri-generator.ts";
 import { createGenerateIriTool } from "./generate-iri/tool.ts";
 
-export interface SparqlOptions {
-  sdk: Worlds;
-  iriGenerator: IriGenerator;
+/**
+ * generateIri generates a random IRI using the ulid library
+ * and a default prefix.
+ */
+export function generateIri(): string {
+  return `https://wazoo.tech/.well-known/genid/${ulid()}`;
 }
 
-export function createSparqlTools(options: SparqlOptions) {
+/**
+ * CreateToolsOptions are the options for creating tools.
+ */
+export interface CreateToolsOptions {
+  /**
+   * world is the world for which tools are being created.
+   */
+  world: World;
+
+  /**
+   * userIri is the IRI of the user.
+   */
+  userIri?: string;
+
+  /**
+   * assistantIri is the IRI of the assistant.
+   */
+  assistantIri?: string;
+
+  /**
+   * generateIri is a function that generates an IRI for new entities.
+   */
+  generateIri?: () => string;
+}
+
+// TODO: Improve accuracy of ReturnType<typeof createTools>.
+
+/**
+ * createTools creates a set of tools for a world.
+ */
+export function createTools(options: CreateToolsOptions): {
+  executeSparql: Tool;
+  searchFacts: Tool;
+  generateIri: Tool;
+} {
   return {
-    query_sparql: createQuerySparqlTool(options.sparqlEngine),
-    update_sparql: createUpdateSparqlTool(options.sparqlEngine),
-    search_facts: createSearchFactsTool(options.searchEngine),
-    generate_iri: createGenerateIriTool(options.iriGenerator),
+    executeSparql: createExecuteSparqlTool(options.world),
+    searchFacts: createSearchFactsTool(options.world),
+    generateIri: createGenerateIriTool(options.generateIri ?? generateIri),
   };
 }
 
-export interface SparqlPromptContext {
-  userIri: string;
-  assistantIri: string;
-  formatDate: () => string;
+/**
+ * FormatPromptOptions are the options for formatting a prompt.
+ */
+export interface FormatPromptOptions {
+  content: string;
+  date?: Date;
+  userIri?: string;
+  assistantIri?: string;
 }
 
-export function formatSparqlPrompt(
-  prompt: string,
-  context?: SparqlPromptContext,
-) {
+/**
+ * formatPrompt formats a prompt for a world.
+ */
+export function formatPrompt(options: FormatPromptOptions): string {
   const parts: string[] = [];
-  if (context?.userIri) {
+
+  // Giving the user an IRI helps the assistant reason about the user.
+  if (options.userIri) {
     parts.push(
-      `The user's IRI is <${context.userIri}>. When the prompt references the user (explicitly or implicitly through first-person pronouns such as "me", "I", "we", etc.), use this IRI.`,
+      `The user's IRI is <${options.userIri}>. When the prompt references the user (explicitly or implicitly through first-person pronouns such as "me", "I", "we", etc.), use this IRI.`,
     );
   }
 
-  if (context?.assistantIri) {
+  // Giving the assistant an IRI helps the assistant reason about itself.
+  if (options.assistantIri) {
     parts.push(
-      `The assistant's IRI is <${context.assistantIri}>. When the prompt references the assistant (explicitly or implicitly through second-person pronouns), use this IRI.`,
+      `The assistant's IRI is <${options.assistantIri}>. When the prompt references the assistant (explicitly or implicitly through second-person pronouns), use this IRI.`,
     );
   }
 
-  if (context?.formatDate) {
+  // Giving the assistant a clock helps the assistant reason about time.
+  if (options.date) {
     parts.push(
-      `The time of writing is ${context.formatDate()}.`,
+      `The time of writing is ${options.date}.`,
     );
   }
 
-  parts.push(`Generate a SPARQL query for: ${prompt}`);
-  return parts.join(" ");
+  // Append the content of the prompt at the end.
+  parts.push(options.content);
+
+  // Join all formatted parts with a newline.
+  return parts.join("\n\n");
 }

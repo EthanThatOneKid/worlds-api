@@ -1,5 +1,7 @@
 import type { AppContext } from "./app-context.ts";
 
+// TODO: Improve usage to limit requests by the authenticated user's account plan.
+
 /**
  * incrementRequestCount increments the request count for a world.
  */
@@ -15,13 +17,17 @@ export async function incrementRequestCount(
   // This allows O(1) lookup and atomic updates.
   const bucketId = `${worldId}_${bucketStartTs}`;
   const existing = await appContext.db.usageBuckets.find(bucketId);
-  await appContext.db
+  const atomicOperation = appContext.db
     .atomic(({ usageBuckets }) => usageBuckets)
     .set(bucketId, {
       accountId,
       worldId,
       bucketStartTs,
       requestCount: (existing?.value.requestCount ?? 0) + 1,
-    })
-    .commit();
+    });
+  if (existing) {
+    atomicOperation.check(existing);
+  }
+
+  await atomicOperation.commit();
 }
