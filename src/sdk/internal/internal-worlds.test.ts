@@ -178,7 +178,7 @@ Deno.test("InternalWorlds - Worlds", async (t) => {
         <http://example.org/subject> <http://example.org/predicate> "Create Object" .
       }
     `;
-    await sdk.worlds.sparqlUpdate(worldId, updateQuery);
+    await sdk.worlds.sparql(worldId, updateQuery);
 
     // 2. Query data via SPARQL Query
     const selectQuery = `
@@ -187,7 +187,7 @@ Deno.test("InternalWorlds - Worlds", async (t) => {
       }
     `;
 
-    const result = await sdk.worlds.sparqlQuery(
+    const result = await sdk.worlds.sparql(
       worldId,
       selectQuery,
       // deno-lint-ignore no-explicit-any
@@ -380,14 +380,14 @@ Deno.test("InternalWorlds - Admin Account Override", async (t) => {
       const worldId = result.id;
 
       // Perform SPARQL update using admin override
-      await adminSdk.worlds.sparqlUpdate(
+      await adminSdk.worlds.sparql(
         worldId,
         'INSERT DATA { <http://example.org/s> <http://example.org/p> "Admin Object" . }',
         { accountId: accountA.id },
       );
 
       // Perform SPARQL query using admin override
-      const queryResult = await adminSdk.worlds.sparqlQuery(
+      const queryResult = await adminSdk.worlds.sparql(
         worldId,
         "SELECT * WHERE { ?s ?p ?o }",
         { accountId: accountA.id },

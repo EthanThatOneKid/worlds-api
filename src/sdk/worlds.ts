@@ -173,12 +173,12 @@ export class Worlds {
   }
 
   /**
-   * sparqlQuery executes a SPARQL query against a world
+   * sparql executes a SPARQL query or update against a world
    * in the Worlds API.
    *
-   * @see https://www.w3.org/TR/sparql11-query/
+   * @see https://www.w3.org/TR/sparql11-protocol/
    */
-  public async sparqlQuery(
+  public async sparql(
     worldId: string,
     query: string,
     options?: { accountId?: string },
@@ -204,48 +204,15 @@ export class Worlds {
     );
     if (!response.ok) {
       throw new Error(
-        `Failed to execute SPARQL query: ${response.status} ${response.statusText}`,
+        `Failed to execute SPARQL: ${response.status} ${response.statusText}`,
       );
     }
 
-    const json = await response.json();
-    return json;
-  }
-
-  /**
-   * sparqlUpdate executes a SPARQL update against a world
-   * in the Worlds API.
-   *
-   * @see https://www.w3.org/TR/sparql11-update/
-   */
-  public async sparqlUpdate(
-    worldId: string,
-    update: string,
-    options?: { accountId?: string },
-  ): Promise<void> {
-    const url = new URL(
-      `${this.options.baseUrl}/worlds/${worldId}/sparql`,
-    );
-    if (options?.accountId) {
-      url.searchParams.set("account", options.accountId);
+    if (response.status === 204) {
+      return null;
     }
 
-    const response = await this.fetch(
-      url,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${this.options.apiKey}`,
-          "Content-Type": "application/sparql-update",
-        },
-        body: update,
-      },
-    );
-    if (!response.ok) {
-      throw new Error(
-        `Failed to execute SPARQL update: ${response.status} ${response.statusText}`,
-      );
-    }
+    return await response.json();
   }
 
   /**
@@ -356,24 +323,13 @@ export class World {
   }
 
   /**
-   * sparqlQuery executes a SPARQL query against the world.
+   * sparql executes a SPARQL query or update against the world.
    */
-  public sparqlQuery(
+  public sparql(
     query: string,
     options?: { accountId?: string },
-    // deno-lint-ignore no-explicit-any
-  ): Promise<any> {
-    return this.worlds.sparqlQuery(this.options.worldId, query, options);
-  }
-
-  /**
-   * sparqlUpdate executes a SPARQL update against the world.
-   */
-  public sparqlUpdate(
-    update: string,
-    options?: { accountId?: string },
-  ): Promise<void> {
-    return this.worlds.sparqlUpdate(this.options.worldId, update, options);
+  ): Promise<unknown> {
+    return this.worlds.sparql(this.options.worldId, query, options);
   }
 
   /**
