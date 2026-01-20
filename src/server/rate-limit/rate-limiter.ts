@@ -1,4 +1,4 @@
-import type { UsageBucket } from "#/server/db/kvdex.ts";
+import type { TokenBucket } from "#/server/db/kvdex.ts";
 import type {
   RateLimiter,
   RateLimitPolicy,
@@ -20,7 +20,7 @@ export class TokenBucketRateLimiter implements RateLimiter {
     cost: number,
     policy: RateLimitPolicy,
   ): Promise<RateLimitResult> {
-    const kvKey = ["usageBuckets", key];
+    const kvKey = ["tokenBuckets", key];
 
     // Retry loop for atomic operations
     const maxRetries = 10;
@@ -28,7 +28,7 @@ export class TokenBucketRateLimiter implements RateLimiter {
       const now = Date.now();
 
       // Try to get existing bucket
-      const entry = await this.kv.get<UsageBucket>(kvKey);
+      const entry = await this.kv.get<TokenBucket>(kvKey);
       const existing = entry.value;
 
       let tokens: number;
@@ -66,7 +66,7 @@ export class TokenBucketRateLimiter implements RateLimiter {
 
       // Only update bucket if request is allowed
       if (allowed) {
-        const nextValue: UsageBucket = {
+        const nextValue: TokenBucket = {
           accountId: key.split(":")[0], // Extract accountId from key
           key,
           tokens,

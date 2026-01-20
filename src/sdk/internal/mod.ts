@@ -1,2 +1,2 @@
-export * from "./internal-worlds.ts";
+export * from "./sdk.ts";
 export * from "./types.ts";

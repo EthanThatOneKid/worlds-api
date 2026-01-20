@@ -1,12 +1,12 @@
 import { assert, assertEquals } from "@std/assert";
-import { InternalWorlds } from "./internal-worlds.ts";
+import { InternalWorldsSdk } from "./sdk.ts";
 import { createServer } from "#/server/server.ts";
 import { createTestAccount, createTestContext } from "#/server/testing.ts";
 
-Deno.test("InternalWorlds - Accounts", async (t) => {
+Deno.test("InternalWorldsSdk - Accounts", async (t) => {
   const appContext = await createTestContext();
   const server = await createServer(appContext);
-  const sdk = new InternalWorlds({
+  const sdk = new InternalWorldsSdk({
     baseUrl: "http://localhost/v1",
     apiKey: appContext.admin!.apiKey, // Use admin API key for SDK
     fetch: (url, init) => server.fetch(new Request(url, init)),
@@ -63,7 +63,7 @@ Deno.test("InternalWorlds - Accounts", async (t) => {
   appContext.kv.close();
 });
 
-Deno.test("InternalWorlds - Worlds", async (t) => {
+Deno.test("InternalWorldsSdk - Worlds", async (t) => {
   const appContext = await createTestContext();
   const server = await createServer(appContext);
 
@@ -72,7 +72,7 @@ Deno.test("InternalWorlds - Worlds", async (t) => {
   const { id: accountId, apiKey } = await createTestAccount(appContext.db);
 
   // Use the account's API key for world operations
-  const sdk = new InternalWorlds({
+  const sdk = new InternalWorldsSdk({
     baseUrl: "http://localhost/v1",
     apiKey: apiKey,
     fetch: (url, init) => server.fetch(new Request(url, init)),
@@ -156,12 +156,12 @@ Deno.test("InternalWorlds - Worlds", async (t) => {
   appContext.kv.close();
 });
 
-Deno.test("InternalWorlds - Admin Account Override", async (t) => {
+Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
   const appContext = await createTestContext();
   const server = await createServer(appContext);
 
   // Create SDK with admin API key
-  const adminSdk = new InternalWorlds({
+  const adminSdk = new InternalWorldsSdk({
     baseUrl: "http://localhost/v1",
     apiKey: appContext.admin!.apiKey,
     fetch: (url, init) => server.fetch(new Request(url, init)),

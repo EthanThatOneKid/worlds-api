@@ -2,7 +2,7 @@
 
 [![JSR](https://jsr.io/badges/@fartlabs/worlds)](https://jsr.io/@fartlabs/worlds)
 [![JSR score](https://jsr.io/badges/@fartlabs/worlds/score)](https://jsr.io/@fartlabs/worlds/score)
-[![GitHub Actions](https://github.com/EthanThatOneKid/worlds-api/actions/workflows/check.yaml/badge.svg)](https://github.com/EthanThatOneKid/worlds-api/actions/workflows/check.yaml)
+[![GitHub Actions](https://github.com/wazootech/worlds-api/actions/workflows/check.yaml/badge.svg)](https://github.com/wazootech/worlds-api/actions/workflows/check.yaml)
 
 **Worlds API™** is a REST API designed to manage, query, update, and reason over
 [SPARQL 1.1](https://www.w3.org/TR/sparql11-overview/)-compatible knowledge
@@ -22,25 +22,29 @@ You can use the Worlds API SDK to interact with your knowledge bases
 programmatically.
 
 ```typescript
-import { World } from "@fartlabs/worlds";
+import { WorldsSdk } from "@fartlabs/worlds";
 
-// Initialize the client for a specific world.
-const world = new World({
+// Initialize the client.
+const sdk = new WorldsSdk({
   baseUrl: "http://localhost:8000/v1",
   apiKey: "your-api-key",
-  worldId: "my-knowledge-base",
 });
 
+const worldId = "my-knowledge-base";
+
 // Add some knowledge (triples) to your world.
-await world.sparql(`
+await sdk.worlds.sparql(
+  worldId,
+  `
   INSERT DATA {
     <http://example.com/ethan> <http://schema.org/relatedTo> <http://example.com/gregory> .
     <http://example.com/gregory> <http://schema.org/givenName> "Gregory" .
   }
-`);
+`,
+);
 
 // Search your world to find the named node for Gregory.
-const searchResult = await world.search("Gregory");
+const searchResult = await sdk.worlds.search(worldId, "Gregory");
 
 console.log(searchResult);
 // [
@@ -55,12 +59,15 @@ console.log(searchResult);
 // ]
 
 // Reason over your world using SPARQL.
-const result = await world.sparql(`
+const result = await sdk.worlds.sparql(
+  worldId,
+  `
   SELECT ?name WHERE {
     <http://example.com/ethan> <http://schema.org/relatedTo> ?person .
     ?person <http://schema.org/givenName> ?name .
   }
-`);
+`,
+);
 
 console.log(result);
 // {
@@ -73,6 +80,32 @@ console.log(result);
 //     ]
 //   }
 // }
+```
+
+### Conversations & Messages
+
+```typescript
+import { WorldsSdk } from "@fartlabs/worlds";
+
+const sdk = new WorldsSdk({
+  baseUrl: "http://localhost:8000/v1",
+  apiKey: "your-api-key",
+});
+
+// Create a new conversation in a world.
+const conversation = await sdk.conversations.create("my-world-id", {
+  metadata: { topic: "Greetings" },
+});
+
+// Add a message to the conversation.
+await sdk.messages.create("my-world-id", conversation.id, {
+  role: "user",
+  content: "Hello, world!",
+});
+
+// List messages.
+const messages = await sdk.messages.list("my-world-id", conversation.id);
+console.log(messages);
 ```
 
 ## Development

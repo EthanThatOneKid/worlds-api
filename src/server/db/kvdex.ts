@@ -24,8 +24,7 @@ export function createWorldsKvdex(kv: Deno.Kv) {
           apiKey: "secondary",
         },
       }),
-      usageBuckets: collection(usageBucketSchema),
-
+      tokenBuckets: collection(tokenBucketSchema),
       worlds: collection(worldSchema, {
         indices: {
           accountId: "secondary",
@@ -33,6 +32,16 @@ export function createWorldsKvdex(kv: Deno.Kv) {
       }),
       worldBlobs: collection(worldBlobSchema, {
         encoder: jsonEncoder(),
+      }),
+      conversations: collection(conversationSchema, {
+        indices: {
+          worldId: "secondary",
+        },
+      }),
+      messages: collection(messageSchema, {
+        indices: {
+          conversationId: "secondary",
+        },
       }),
     },
   });
@@ -75,15 +84,15 @@ export const worldSchema = z.object({
   isPublic: z.boolean().default(false),
 });
 
-export type UsageBucket = z.infer<typeof usageBucketSchema>;
+export type TokenBucket = z.infer<typeof tokenBucketSchema>;
 
 /**
- * usageBucketSchema is the schema for a usage bucket.
+ * tokenBucketSchema is the schema for a token bucket.
  *
- * A usage bucket implements the [Token Bucket](https://en.wikipedia.org/wiki/Token_bucket)
+ * A token bucket implements the [Token Bucket](https://en.wikipedia.org/wiki/Token_bucket)
  * algorithm for rate limiting.
  */
-export const usageBucketSchema = z.object({
+export const tokenBucketSchema = z.object({
   accountId: z.string(),
   key: z.string(), // Composite key: worldId:resourceType
   tokens: z.number(),
@@ -99,3 +108,80 @@ export type WorldBlob = z.infer<typeof worldBlobSchema>;
  * associated with a world.
  */
 export const worldBlobSchema = z.instanceof(Uint8Array);
+
+export type Conversation = z.infer<typeof conversationSchema>;
+
+export const conversationSchema = z.object({
+  id: z.string(),
+  worldId: z.string(),
+  createdAt: z.number(),
+  updatedAt: z.number(),
+  metadata: z.any().optional(),
+});
+
+const textPartSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+const imagePartSchema = z.object({
+  type: z.literal("image"),
+  image: z.union([z.string(), z.instanceof(Uint8Array)]),
+  mimeType: z.string().optional(),
+});
+
+const filePartSchema = z.object({
+  type: z.literal("file"),
+  data: z.union([z.string(), z.instanceof(Uint8Array)]),
+  mimeType: z.string(),
+});
+
+const toolCallPartSchema = z.object({
+  type: z.literal("tool-call"),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  args: z.any(),
+});
+
+const toolResultPartSchema = z.object({
+  type: z.literal("tool-result"),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  result: z.any(),
+  isError: z.boolean().optional(),
+});
+
+const modelMessageSchema = z.union([
+  z.object({
+    role: z.literal("system"),
+    content: z.string(),
+  }),
+  z.object({
+    role: z.literal("user"),
+    content: z.union([
+      z.string(),
+      z.array(z.union([textPartSchema, imagePartSchema, filePartSchema])),
+    ]),
+  }),
+  z.object({
+    role: z.literal("assistant"),
+    content: z.union([
+      z.string(),
+      z.array(z.union([textPartSchema, toolCallPartSchema])),
+    ]).optional().nullable(),
+  }),
+  z.object({
+    role: z.literal("tool"),
+    content: z.array(toolResultPartSchema),
+  }),
+]);
+
+export type Message = z.infer<typeof messageSchema>;
+
+export const messageSchema = z.object({
+  id: z.string(),
+  worldId: z.string(),
+  conversationId: z.string(),
+  content: modelMessageSchema,
+  createdAt: z.number(),
+});

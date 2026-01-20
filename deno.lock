@@ -28,7 +28,7 @@
     "npm:@rdfjs/types@^2.0.1": "2.0.1",
     "npm:@types/n3@*": "1.26.1",
     "npm:@types/n3@^1.26.1": "1.26.1",
-    "npm:ai@^6.0.39": "6.0.39_zod@3.25.76",
+    "npm:ai@^6.0.41": "6.0.41_zod@3.25.76",
     "npm:n3@^2.0.1": "2.0.1",
     "npm:rdf-canonize@5": "5.0.0",
     "npm:zod@^3.24.0": "3.25.76",
@@ -3091,8 +3091,8 @@
     "agent-base@7.1.4": {
       "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="
     },
-    "ai@6.0.39_zod@3.25.76": {
-      "integrity": "sha512-hF05gF4H+IxuilA8kNANVVHQXduTJsJaH74jmlmy8mcQt3NZgPYe2zZNyGBV4DPDYTUDt1h31hbLgQqJTn5LGA==",
+    "ai@6.0.41_zod@3.25.76": {
+      "integrity": "sha512-FaFKBiqOX3RKEz7PJ/K6d9+1JnHilzR4ID2elRzZ/yVGC5vM4RvVRyYHlhFso/gyQRXrQZtOSbqbBchAwcTDXg==",
       "dependencies": [
         "@ai-sdk/gateway",
         "@ai-sdk/provider",
@@ -4113,7 +4113,7 @@
       "npm:@google/genai@^1.37.0",
       "npm:@libsql/client@0.17",
       "npm:@types/n3@^1.26.1",
-      "npm:ai@^6.0.39",
+      "npm:ai@^6.0.41",
       "npm:n3@^2.0.1",
       "npm:zod@^4.3.5"
     ]
