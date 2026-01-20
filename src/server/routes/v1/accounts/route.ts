@@ -49,13 +49,18 @@ export default (appContext: AppContext) =>
           });
         }
 
-        const body = await ctx.request.json();
+        let body;
+        try {
+          body = await ctx.request.json();
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
         const apiKey = ulid();
         const timestamp = Date.now();
         const account = {
           id: body.id,
           description: body.description ?? null,
-          plan: body.plan ?? null,
+          plan: body.plan,
           apiKey: apiKey,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -124,10 +129,15 @@ export default (appContext: AppContext) =>
           return new Response("Account ID required", { status: 400 });
         }
 
-        const body = await ctx.request.json();
+        let body;
+        try {
+          body = await ctx.request.json();
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
         const result = await appContext.db.accounts.update(accountId, {
           description: body.description ?? null,
-          plan: body.plan ?? null,
+          plan: body.plan,
           updatedAt: Date.now(),
         });
         if (!result.ok) {

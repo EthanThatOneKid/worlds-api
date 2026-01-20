@@ -75,7 +75,12 @@ export default (appContext: AppContext) => {
           return new Response("World not found", { status: 404 });
         }
 
-        const body = await ctx.request.json();
+        let body;
+        try {
+          body = await ctx.request.json();
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
         const now = Date.now();
         const conversation: Conversation = {
           id: crypto.randomUUID(),
@@ -169,22 +174,31 @@ export default (appContext: AppContext) => {
           return new Response("Conversation not found", { status: 404 });
         }
 
-        const body = await ctx.request.json();
-        const updatedConversation: Conversation = {
-          ...conversationResult.value,
-          metadata: body.metadata ?? conversationResult.value.metadata,
-          updatedAt: Date.now(),
-        };
-
-        const result = await appContext.db.conversations.set(
+        let body;
+        try {
+          body = await ctx.request.json();
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
+        const result = await appContext.db.conversations.update(
           conversationId,
-          updatedConversation,
+          {
+            metadata: body.metadata ?? conversationResult.value.metadata,
+            updatedAt: Date.now(),
+          },
         );
         if (!result.ok) {
           return new Response("Failed to update conversation", { status: 500 });
         }
 
-        return Response.json({ ...updatedConversation, id: conversationId });
+        const updated = await appContext.db.conversations.find(conversationId);
+        if (!updated) {
+          return new Response("Failed to retrieve updated conversation", {
+            status: 500,
+          });
+        }
+
+        return Response.json({ ...updated.value, id: conversationId });
       },
     )
     .delete(
@@ -323,7 +337,12 @@ export default (appContext: AppContext) => {
           return new Response("Conversation not found", { status: 404 });
         }
 
-        const body = await ctx.request.json();
+        let body;
+        try {
+          body = await ctx.request.json();
+        } catch {
+          return new Response("Invalid JSON", { status: 400 });
+        }
         const now = Date.now();
         const message: Message = {
           id: crypto.randomUUID(),

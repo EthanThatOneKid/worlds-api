@@ -57,7 +57,7 @@ export type Account = z.infer<typeof accountSchema>;
 export const accountSchema = z.object({
   id: z.string(),
   description: z.string().nullable(),
-  plan: z.string().nullable(),
+  plan: z.string().optional(),
   apiKey: z.string(),
   createdAt: z.number(),
   updatedAt: z.number(),

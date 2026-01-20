@@ -59,7 +59,9 @@ export default (appContext: AppContext) => {
 
         const updatedAt = Date.now();
         const result = await appContext.db.worlds.update(worldId, {
-          ...body,
+          label: body.label ?? worldResult.value.label,
+          description: body.description ?? worldResult.value.description,
+          isPublic: body.isPublic ?? worldResult.value.isPublic,
           updatedAt,
         });
         if (!result.ok) {

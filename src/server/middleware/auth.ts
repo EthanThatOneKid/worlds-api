@@ -34,6 +34,7 @@ export async function authorizeRequest(
   // Get the account desired by the admin.
   const url = new URL(request.url);
   const accountId = url.searchParams.get("account");
+
   if (!accountId) {
     return authorized;
   }

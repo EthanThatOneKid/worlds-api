@@ -358,3 +358,87 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
 
   appContext.kv.close();
 });
+
+Deno.test("InternalWorldsSdk - Conversations & Messages", async (t) => {
+  const appContext = await createTestContext();
+  const server = await createServer(appContext);
+
+  const { id: accountId, apiKey } = await createTestAccount(appContext.db);
+
+  const sdk = new InternalWorldsSdk({
+    baseUrl: "http://localhost/v1",
+    apiKey: apiKey,
+    fetch: (url, init) => server.fetch(new Request(url, init)),
+  });
+
+  // Setup: Create a world
+  const world = await sdk.worlds.create({
+    accountId,
+    label: "Msg Test World",
+    description: "For messages",
+    isPublic: false,
+  });
+  const worldId = world.id;
+
+  let conversationId: string;
+
+  await t.step("create conversation", async () => {
+    const conv = await sdk.conversations.create(worldId, {
+      worldId,
+      metadata: { topic: "testing" },
+    });
+    assert(conv.id !== undefined);
+    assertEquals(conv.worldId, worldId);
+    assertEquals(conv.metadata?.topic, "testing");
+    conversationId = conv.id;
+  });
+
+  await t.step("get conversation", async () => {
+    const conv = await sdk.conversations.get(worldId, conversationId);
+    assert(conv !== null);
+    assertEquals(conv.id, conversationId);
+  });
+
+  await t.step("list conversations", async () => {
+    const convs = await sdk.conversations.list(worldId);
+    const found = convs.find((c) => c.id === conversationId);
+    assert(found !== undefined);
+  });
+
+  await t.step("update conversation", async () => {
+    const updated = await sdk.conversations.update(worldId, conversationId, {
+      metadata: { topic: "updated" },
+    });
+    assertEquals(updated.metadata?.topic, "updated");
+
+    const conv = await sdk.conversations.get(worldId, conversationId);
+    assertEquals(conv?.metadata?.topic, "updated");
+  });
+
+  await t.step("create message", async () => {
+    const msg = await sdk.messages.create(worldId, conversationId, {
+      worldId,
+      conversationId,
+      content: { role: "user", content: "Hello world" },
+    });
+    assert(msg.id !== undefined);
+    assertEquals(msg.conversationId, conversationId);
+    // @ts-ignore: content type check
+    assertEquals(msg.content.content, "Hello world");
+  });
+
+  await t.step("list messages", async () => {
+    const msgs = await sdk.messages.list(worldId, conversationId);
+    assert(msgs.length >= 1);
+    // @ts-ignore: content type check
+    assertEquals(msgs[0].content.content, "Hello world");
+  });
+
+  await t.step("delete conversation", async () => {
+    await sdk.conversations.delete(worldId, conversationId);
+    const conv = await sdk.conversations.get(worldId, conversationId);
+    assertEquals(conv, null);
+  });
+
+  appContext.kv.close();
+});

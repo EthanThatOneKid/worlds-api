@@ -102,7 +102,7 @@ Deno.test("Accounts API routes - CRUD operations", async (t) => {
       const body = await res.json();
       assertEquals(body.id, "acc_partial");
       assertEquals(body.description, null);
-      assertEquals(body.plan, null);
+      assertEquals(body.plan, undefined);
     },
   );
 
