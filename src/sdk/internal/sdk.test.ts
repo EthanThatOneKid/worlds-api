@@ -83,19 +83,19 @@ Deno.test("InternalWorldsSdk - Worlds", async (t) => {
   await t.step("create world", async () => {
     const world = await sdk.worlds.create({
       accountId,
-      name: "SDK World",
+      label: "SDK World",
       description: "Test World",
       isPublic: false,
     });
     assert(world.id !== undefined);
-    assertEquals(world.name, "SDK World");
+    assertEquals(world.label, "SDK World");
     worldId = world.id;
   });
 
   await t.step("get world", async () => {
     const world = await sdk.worlds.get(worldId);
     assert(world !== null);
-    assertEquals(world.name, "SDK World");
+    assertEquals(world.label, "SDK World");
   });
 
   await t.step("list worlds", async () => {
@@ -175,7 +175,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     // Create worlds for both accounts directly in DB
     await appContext.db.worlds.add({
       accountId: accountA.id,
-      name: "Account A World",
+      label: "Account A World",
       description: "Test",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -185,7 +185,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
 
     await appContext.db.worlds.add({
       accountId: accountB.id,
-      name: "Account B World",
+      label: "Account B World",
       description: "Test",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -198,7 +198,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
       accountId: accountA.id,
     });
     assertEquals(worldsA.length, 1);
-    assertEquals(worldsA[0].name, "Account A World");
+    assertEquals(worldsA[0].label, "Account A World");
     assertEquals(worldsA[0].accountId, accountA.id);
 
     // List worlds for Account B using admin override
@@ -206,20 +206,20 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
       accountId: accountB.id,
     });
     assertEquals(worldsB.length, 1);
-    assertEquals(worldsB[0].name, "Account B World");
+    assertEquals(worldsB[0].label, "Account B World");
     assertEquals(worldsB[0].accountId, accountB.id);
   });
 
   await t.step("admin can create world for specific account", async () => {
     const world = await adminSdk.worlds.create({
       accountId: accountA.id, // This will be ignored
-      name: "Admin Created World",
+      label: "Admin Created World",
       description: "Created via admin override",
       isPublic: false,
     }, { accountId: accountB.id }); // This accountId takes precedence
 
     assertEquals(world.accountId, accountB.id);
-    assertEquals(world.name, "Admin Created World");
+    assertEquals(world.label, "Admin Created World");
 
     // Verify in database
     const dbWorld = await appContext.db.worlds.find(world.id);
@@ -231,7 +231,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     // Create a world for Account A
     const result = await appContext.db.worlds.add({
       accountId: accountA.id,
-      name: "Test World",
+      label: "Test World",
       description: "Test",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -252,7 +252,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     // Create a world for Account A
     const result = await appContext.db.worlds.add({
       accountId: accountA.id,
-      name: "Original Name",
+      label: "Original Name",
       description: "Original",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -278,7 +278,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     // Create a world for Account B
     const result = await appContext.db.worlds.add({
       accountId: accountB.id,
-      name: "To Delete",
+      label: "To Delete",
       description: "Test",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -301,7 +301,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
       // Create a world for Account A
       const result = await appContext.db.worlds.add({
         accountId: accountA.id,
-        name: "SPARQL Test World",
+        label: "SPARQL Test World",
         description: "Test",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -338,7 +338,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     // Create a world for Account A
     const result = await appContext.db.worlds.add({
       accountId: accountA.id,
-      name: "Search Test World",
+      label: "Search Test World",
       description: "Test",
       createdAt: Date.now(),
       updatedAt: Date.now(),

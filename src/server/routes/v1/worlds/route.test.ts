@@ -12,7 +12,7 @@ Deno.test("Worlds API routes - GET operations", async (t) => {
     const { id: accountId, apiKey } = await createTestAccount(db);
     const result = await db.worlds.add({
       accountId,
-      name: "Test World",
+      label: "Test World",
       description: "Test Description",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -35,7 +35,7 @@ Deno.test("Worlds API routes - GET operations", async (t) => {
 
     const world = await resp.json();
     assertEquals(world.accountId, accountId);
-    assertEquals(world.name, "Test World");
+    assertEquals(world.label, "Test World");
     assert(typeof world.createdAt === "number");
     assert(typeof world.updatedAt === "number");
     assertEquals(world.deletedAt, null);
@@ -66,7 +66,7 @@ Deno.test("Worlds API routes - GET operations", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -109,7 +109,7 @@ Deno.test("Worlds API routes - POST operations", async (t) => {
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        name: "New World",
+        label: "New World",
         description: "New Description",
         isPublic: true,
       }),
@@ -118,7 +118,7 @@ Deno.test("Worlds API routes - POST operations", async (t) => {
     assertEquals(res.status, 201);
 
     const world = await res.json();
-    assertEquals(world.name, "New World");
+    assertEquals(world.label, "New World");
     assertEquals(world.description, "New Description");
     assertEquals(world.isPublic, true);
     assert(typeof world.id === "string");
@@ -141,7 +141,7 @@ Deno.test("Worlds API routes - PUT operations", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -184,7 +184,7 @@ Deno.test("Worlds API routes - PUT operations", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -238,7 +238,7 @@ Deno.test("Worlds API routes - DELETE operations", async (t) => {
     const { id: accountId, apiKey } = await createTestAccount(db);
     const result = await db.worlds.add({
       accountId,
-      name: "Test World",
+      label: "Test World",
       description: "Test Description",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -311,7 +311,7 @@ Deno.test("Worlds API routes - List operations", async (t) => {
 
       const result1 = await db.worlds.add({
         accountId,
-        name: "Test World 1",
+        label: "Test World 1",
         description: "Test Description 1",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -321,7 +321,7 @@ Deno.test("Worlds API routes - List operations", async (t) => {
 
       const result2 = await db.worlds.add({
         accountId,
-        name: "Test World 2",
+        label: "Test World 2",
         description: "Test Description 2",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -346,7 +346,7 @@ Deno.test("Worlds API routes - List operations", async (t) => {
       // Verify worlds belong to test account
       // Note: we can't search by worldId directly in the name since names are "Test World 1", but IDs are UUIDs.
       // The original test checked names.
-      const worldNames = worlds.map((w: { name: string }) => w.name);
+      const worldNames = worlds.map((w: { label: string }) => w.label);
       assert(worldNames.includes("Test World 1"));
       assert(worldNames.includes("Test World 2"));
     },
@@ -381,7 +381,7 @@ Deno.test("Admin Account Override", async (t) => {
     // Create world for Account A
     await db.worlds.add({
       accountId: accountA.id,
-      name: "World A",
+      label: "World A",
       description: "Description A",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -392,7 +392,7 @@ Deno.test("Admin Account Override", async (t) => {
     // Create world for Account B
     await db.worlds.add({
       accountId: accountB.id,
-      name: "World B",
+      label: "World B",
       description: "Description B",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -412,7 +412,7 @@ Deno.test("Admin Account Override", async (t) => {
     assertEquals(respA.status, 200);
     const bodyA = await respA.json();
     assertEquals(bodyA.length, 1);
-    assertEquals(bodyA[0].name, "World A");
+    assertEquals(bodyA[0].label, "World A");
 
     // Admin list for Account B
     const respB = await app.fetch(
@@ -426,7 +426,7 @@ Deno.test("Admin Account Override", async (t) => {
     assertEquals(respB.status, 200);
     const bodyB = await respB.json();
     assertEquals(bodyB.length, 1);
-    assertEquals(bodyB[0].name, "World B");
+    assertEquals(bodyB[0].label, "World B");
   });
 
   await t.step("Admin can create world for a specific account", async () => {
@@ -440,7 +440,7 @@ Deno.test("Admin Account Override", async (t) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: "World C",
+          label: "World C",
           description: "Created by Admin",
         }),
       }),
@@ -448,7 +448,7 @@ Deno.test("Admin Account Override", async (t) => {
     assertEquals(resp.status, 201);
     const world = await resp.json();
     assertEquals(world.accountId, accountC.id);
-    assertEquals(world.name, "World C");
+    assertEquals(world.label, "World C");
 
     // Verify in DB
     const dbWorld = await db.worlds.find(world.id);
@@ -460,7 +460,7 @@ Deno.test("Admin Account Override", async (t) => {
     const accountD = await createTestAccount(db);
     const result = await db.worlds.add({
       accountId: accountD.id,
-      name: "World D",
+      label: "World D",
       description: "to be deleted",
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -493,7 +493,7 @@ Deno.test("Admin Account Override", async (t) => {
       const accountE = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId: accountE.id,
-        name: "World E",
+        label: "World E",
         description: "Sparql usage test",
         createdAt: Date.now(),
         updatedAt: Date.now(),

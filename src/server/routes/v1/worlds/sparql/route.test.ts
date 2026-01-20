@@ -33,7 +33,7 @@ Deno.test("SPARQL API routes - GET operations", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -75,7 +75,7 @@ Deno.test("SPARQL API routes - POST operations (Query)", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -134,7 +134,7 @@ Deno.test("SPARQL API routes - POST operations (Query)", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -187,7 +187,7 @@ Deno.test("SPARQL API routes - POST operations (Update)", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -249,7 +249,7 @@ Deno.test("SPARQL API routes - POST operations (Update)", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World With Prefix",
+        label: "Test World With Prefix",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -341,7 +341,7 @@ Deno.test("SPARQL API routes - Error handling", async (t) => {
       const { id: accountId } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -369,7 +369,7 @@ Deno.test("SPARQL API routes - Error handling", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -401,7 +401,7 @@ Deno.test("SPARQL API routes - Error handling", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -437,7 +437,7 @@ Deno.test("SPARQL API routes - Error handling", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -481,7 +481,7 @@ Deno.test("SPARQL API routes - Method validation", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -512,7 +512,7 @@ Deno.test("SPARQL API routes - Method validation", async (t) => {
       const { id: accountId, apiKey } = await createTestAccount(db);
       const result = await db.worlds.add({
         accountId,
-        name: "Test World",
+        label: "Test World",
         description: "Test Description",
         createdAt: Date.now(),
         updatedAt: Date.now(),

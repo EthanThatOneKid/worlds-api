@@ -24,7 +24,7 @@ Deno.test("Search API routes", async (t) => {
   // Create world in DB
   await db.worlds.add({
     accountId,
-    name: "Test World",
+    label: "Test World",
     description: "A world for testing search",
     createdAt: Date.now(),
     updatedAt: Date.now(),

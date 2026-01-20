@@ -28,7 +28,7 @@
     "npm:@rdfjs/types@^2.0.1": "2.0.1",
     "npm:@types/n3@*": "1.26.1",
     "npm:@types/n3@^1.26.1": "1.26.1",
-    "npm:ai@^6.0.41": "6.0.41_zod@3.25.76",
+    "npm:ai@^6.0.42": "6.0.42_zod@3.25.76",
     "npm:n3@^2.0.1": "2.0.1",
     "npm:rdf-canonize@5": "5.0.0",
     "npm:zod@^3.24.0": "3.25.76",
@@ -113,8 +113,8 @@
     }
   },
   "npm": {
-    "@ai-sdk/gateway@3.0.16_zod@3.25.76": {
-      "integrity": "sha512-OOY5CfRJiHvh/8np2vs1RQaCZ5hWv2qOeEmmeiABXK3gLQHUVnCO+1hhoLsZdHM5iElu6M407dAOfyvTsKJqcQ==",
+    "@ai-sdk/gateway@3.0.17_zod@3.25.76": {
+      "integrity": "sha512-mCz50GlBPyBV96Wcll1Mpaz56MVFuHL+bwRWGkIsCJwKAKIfdgUZecFzS3gckpHGaqP5+BYnmyJocIMzUhTQ2A==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -3091,8 +3091,8 @@
     "agent-base@7.1.4": {
       "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="
     },
-    "ai@6.0.41_zod@3.25.76": {
-      "integrity": "sha512-FaFKBiqOX3RKEz7PJ/K6d9+1JnHilzR4ID2elRzZ/yVGC5vM4RvVRyYHlhFso/gyQRXrQZtOSbqbBchAwcTDXg==",
+    "ai@6.0.42_zod@3.25.76": {
+      "integrity": "sha512-o+MVN7HBE4HEnhtN7nBt9WO1iISI6svyWNoOuY6WiXCdHuZfSGN4MUQ3QwjWz1Ue5gtBEcvwX5XFhgAwlPAxxw==",
       "dependencies": [
         "@ai-sdk/gateway",
         "@ai-sdk/provider",
@@ -4113,7 +4113,7 @@
       "npm:@google/genai@^1.37.0",
       "npm:@libsql/client@0.17",
       "npm:@types/n3@^1.26.1",
-      "npm:ai@^6.0.41",
+      "npm:ai@^6.0.42",
       "npm:n3@^2.0.1",
       "npm:zod@^4.3.5"
     ]

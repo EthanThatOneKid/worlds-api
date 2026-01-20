@@ -76,12 +76,12 @@ export type World = z.infer<typeof worldSchema>;
  */
 export const worldSchema = z.object({
   accountId: z.string(),
-  name: z.string(),
+  label: z.string(),
   description: z.string().nullable(),
   createdAt: z.number(),
   updatedAt: z.number(),
   deletedAt: z.number().nullable(),
-  isPublic: z.boolean().default(false),
+  isPublic: z.boolean().nullable().default(false),
 });
 
 export type TokenBucket = z.infer<typeof tokenBucketSchema>;

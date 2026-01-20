@@ -19,7 +19,7 @@
     "@std/assert": "jsr:@std/assert@^1.0.16",
     "@std/ulid": "jsr:@std/ulid@^1.0.0",
     "@types/n3": "npm:@types/n3@^1.26.1",
-    "ai": "npm:ai@^6.0.41",
+    "ai": "npm:ai@^6.0.42",
     "n3": "npm:n3@^2.0.1",
     "zod": "npm:zod@^4.3.5",
     "deno_tree_sitter": "https://deno.land/x/deno_tree_sitter@1.0.1.2/main/main.js",
@@ -31,10 +31,12 @@
     "publish:dry": "deno publish --dry-run --allow-dirty",
     "fmt": "deno fmt",
     "lint": "deno lint --unstable-kv --unstable-raw-imports",
+    "check": "deno check --unstable-kv --unstable-raw-imports",
     "precommit": {
       "description": "Runs fmt, lint, and test",
       "dependencies": [
         "test",
+        "check",
         "lint",
         "fmt"
       ]

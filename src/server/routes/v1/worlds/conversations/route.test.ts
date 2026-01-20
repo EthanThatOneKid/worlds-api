@@ -16,7 +16,7 @@ Deno.test("GET /v1/worlds/:world/conversations", async () => {
 
   const worldRecord = await sdk.worlds.create({
     accountId: account.id,
-    name: "Test World",
+    label: "Test World",
     description: "Test World",
     isPublic: false,
   }, { accountId: account.id });
@@ -69,7 +69,7 @@ Deno.test("GET /v1/worlds/:world/conversations/:conversation/messages", async ()
 
   const worldRecord = await sdk.worlds.create({
     accountId: account.id,
-    name: "Test World",
+    label: "Test World",
     description: "Test World",
     isPublic: false,
   }, { accountId: account.id });

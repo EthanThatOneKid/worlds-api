@@ -46,12 +46,12 @@ export type UpdateWorldParams = Partial<CreateWorldParams>;
 export interface WorldRecord {
   id: string;
   accountId: string;
-  name: string;
+  label: string;
   description: string | null;
   createdAt: number;
   updatedAt: number;
   deletedAt: number | null;
-  isPublic: boolean;
+  isPublic: boolean | null;
 }
 
 /**

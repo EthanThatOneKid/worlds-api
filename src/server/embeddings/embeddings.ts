@@ -1,4 +1,5 @@
 // TODO: Support batch generate embeddings. Update embeddings to embed multiple texts at once.
+// See: https://ai-sdk.dev/docs/reference/ai-sdk-core/embed
 
 /**
  * Embeddings interface for generating vector embeddings.

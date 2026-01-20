@@ -1,12 +1,12 @@
 import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import type { World } from "#/sdk/worlds.ts";
+import type { Worlds } from "#/sdk/worlds.ts";
 
 /**
  * createSearchFactsTool creates a search facts tool for a world.
  */
-export function createSearchFactsTool(world: World): Tool {
+export function createSearchFactsTool(worlds: Worlds, worldId: string): Tool {
   return tool({
     description:
       "Search for facts in the knowledge base using full-text and vector search. Use this to find entities when you don't know their exact IRI or to explore broad topics.",
@@ -19,7 +19,7 @@ export function createSearchFactsTool(world: World): Tool {
       ),
     }),
     execute: async ({ query, limit }) => {
-      return await world.search(query, { limit: limit ?? 10 });
+      return await worlds.search(worldId, query, { limit: limit ?? 10 });
     },
   });
 }

@@ -4,7 +4,7 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createServer } from "#/server/server.ts";
 import { createTestAccount, createTestContext } from "#/server/testing.ts";
 import type { WorldsOptions } from "#/sdk/types.ts";
-import { World, Worlds } from "#/sdk/worlds.ts";
+import { InternalWorldsSdk } from "#/sdk/internal/sdk.ts";
 import { createTools, formatPrompt } from "./tools.ts";
 import systemPrompt from "./prompt.md" with { type: "text" };
 
@@ -18,25 +18,20 @@ if (import.meta.main) {
     fetch: (url, init) => server.fetch(new Request(url, init)),
   };
 
-  const worlds = new Worlds(worldsOptions);
+  const sdk = new InternalWorldsSdk(worldsOptions);
 
   const testAccount = await createTestAccount(appContext.db);
-  const worldRecord = await worlds.create({
+  const worldRecord = await sdk.worlds.create({
     accountId: testAccount.id,
-    name: "Test World",
+    label: "Test World",
     description: "Test World",
     isPublic: false,
   }, { accountId: testAccount.id });
 
-  const world = new World({
-    ...worldsOptions,
-    worldId: worldRecord.id,
-  });
-
   // Set up tools.
   const tools = createTools({
-    world,
-    userIri: "https://etok.me/",
+    ...worldsOptions,
+    worldId: worldRecord.id,
   });
 
   // Set up AI.
@@ -103,7 +98,9 @@ if (import.meta.main) {
           case "executeSparql": {
             console.log(
               `executeSparql(${call.input.sparql})${
-                toolResult?.output ? ` => ${toolResult?.output}` : ""
+                toolResult?.output
+                  ? ` => ${JSON.stringify(toolResult?.output, null, 2)}`
+                  : ""
               }`,
             );
             break;
@@ -112,7 +109,9 @@ if (import.meta.main) {
           case "searchFacts": {
             console.log(
               `searchFacts(${call.input.query})${
-                toolResult?.output ? ` => ${toolResult?.output}` : ""
+                toolResult?.output
+                  ? ` => ${JSON.stringify(toolResult?.output, null, 2)}`
+                  : ""
               }`,
             );
             break;

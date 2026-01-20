@@ -150,7 +150,7 @@ export default (appContext: AppContext) => {
         const now = Date.now();
         const world = {
           accountId: authorized.account.id,
-          name: body.name,
+          label: body.label,
           description: body.description,
           createdAt: now,
           updatedAt: now,

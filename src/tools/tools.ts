@@ -1,6 +1,7 @@
 import type { Tool } from "ai";
 import { ulid } from "@std/ulid/ulid";
-import type { World } from "#/sdk/worlds.ts";
+import type { WorldsOptions } from "#/sdk/mod.ts";
+import { Worlds } from "#/sdk/worlds.ts";
 import { createExecuteSparqlTool } from "./execute-sparql/tool.ts";
 import { createSearchFactsTool } from "./search-facts/tool.ts";
 import { createGenerateIriTool } from "./generate-iri/tool.ts";
@@ -16,11 +17,11 @@ export function generateIri(): string {
 /**
  * CreateToolsOptions are the options for creating tools.
  */
-export interface CreateToolsOptions {
+export interface CreateToolsOptions extends WorldsOptions {
   /**
-   * world is the world for which tools are being created.
+   * worldId is the ID of the world.
    */
-  world: World;
+  worldId: string;
 
   /**
    * generateIri is a function that generates an IRI for new entities.
@@ -38,9 +39,10 @@ export function createTools(options: CreateToolsOptions): {
   searchFacts: Tool;
   generateIri: Tool;
 } {
+  const worlds = new Worlds(options);
   return {
-    executeSparql: createExecuteSparqlTool(options.world),
-    searchFacts: createSearchFactsTool(options.world),
+    executeSparql: createExecuteSparqlTool(worlds, options.worldId),
+    searchFacts: createSearchFactsTool(worlds, options.worldId),
     generateIri: createGenerateIriTool(options.generateIri ?? generateIri),
   };
 }
@@ -49,11 +51,6 @@ export function createTools(options: CreateToolsOptions): {
  * FormatPromptOptions are the options for formatting a prompt.
  */
 export interface FormatPromptOptions {
-  /**
-   * world is the world for which the prompt is being formatted.
-   */
-  world: World;
-
   /**
    * content is the content of the prompt.
    */

@@ -1,12 +1,15 @@
 import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import type { World } from "#/sdk/worlds.ts";
+import type { Worlds } from "#/sdk/worlds.ts";
 
 /**
  * createExecuteSparqlTool creates a tool that executes SPARQL queries and updates.
  */
-export function createExecuteSparqlTool(world: World): Tool {
+export function createExecuteSparqlTool(
+  worlds: Worlds,
+  worldId: string,
+): Tool {
   return tool({
     description: `Execute a SPARQL query or update against the knowledge base.
 Use this tool to:
@@ -20,7 +23,7 @@ Use this tool to:
       sparql: z.string().describe("The SPARQL query or update to execute."),
     }),
     execute: async ({ sparql }) => {
-      return await world.sparql(sparql);
+      return await worlds.sparql(worldId, sparql);
     },
   });
 }
