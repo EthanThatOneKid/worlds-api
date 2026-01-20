@@ -56,12 +56,12 @@ export type Account = z.infer<typeof accountSchema>;
  */
 export const accountSchema = z.object({
   id: z.string(),
-  description: z.string().optional(),
-  plan: z.string().optional(),
+  description: z.string().nullish(),
+  plan: z.string().nullish(),
   apiKey: z.string(),
   createdAt: z.number(),
   updatedAt: z.number(),
-  deletedAt: z.number().optional(),
+  deletedAt: z.number().nullish(),
 });
 
 export type World = z.infer<typeof worldSchema>;
@@ -77,11 +77,11 @@ export type World = z.infer<typeof worldSchema>;
 export const worldSchema = z.object({
   accountId: z.string(),
   label: z.string(),
-  description: z.string().optional(),
+  description: z.string().nullish(),
   createdAt: z.number(),
   updatedAt: z.number(),
-  deletedAt: z.number().optional(),
-  isPublic: z.boolean().optional().default(false),
+  deletedAt: z.number().nullish(),
+  isPublic: z.boolean().nullish().default(false),
 });
 
 export type TokenBucket = z.infer<typeof tokenBucketSchema>;
@@ -116,7 +116,7 @@ export const conversationSchema = z.object({
   worldId: z.string(),
   createdAt: z.number(),
   updatedAt: z.number(),
-  metadata: z.any().optional(),
+  metadata: z.any().nullish(),
 });
 
 const textPartSchema = z.object({
