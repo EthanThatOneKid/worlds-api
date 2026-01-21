@@ -49,9 +49,13 @@ export async function sparql(
     return { blob, result };
   }
 
-  // Boolean result
   if (queryType.resultType === "boolean") {
     const result = await handleBoolean(queryType);
+    return { blob, result };
+  }
+
+  if (queryType.resultType === "quads") {
+    const result = await handleQuads(queryType);
     return { blob, result };
   }
 
@@ -120,5 +124,53 @@ async function handleBoolean(queryType: any): Promise<SparqlResult> {
   return {
     head: {},
     boolean: booleanResult,
+  };
+}
+
+// deno-lint-ignore no-explicit-any
+async function handleQuads(queryType: any): Promise<SparqlResult> {
+  const quadsStream = await queryType.execute();
+  // deno-lint-ignore no-explicit-any
+  const quads = await new Promise<any[]>((resolve, reject) => {
+    // deno-lint-ignore no-explicit-any
+    const q: any[] = [];
+    // deno-lint-ignore no-explicit-any
+    quadsStream.on("data", (quad: any) => {
+      q.push({
+        subject: {
+          type: quad.subject.termType === "NamedNode" ? "uri" : "bnode",
+          value: quad.subject.value,
+        },
+        predicate: {
+          type: "uri",
+          value: quad.predicate.value,
+        },
+        object: {
+          type: quad.object.termType === "NamedNode"
+            ? "uri"
+            : quad.object.termType === "BlankNode"
+            ? "bnode"
+            : "literal",
+          value: quad.object.value,
+          ...(quad.object.language ? { "xml:lang": quad.object.language } : {}),
+          ...(quad.object.datatype &&
+              quad.object.datatype.value !==
+                "http://www.w3.org/2001/XMLSchema#string"
+            ? { datatype: quad.object.datatype.value }
+            : {}),
+        },
+        graph: {
+          type: quad.graph.termType === "DefaultGraph" ? "default" : "uri",
+          value: quad.graph.value,
+        },
+      });
+    });
+    quadsStream.on("end", () => resolve(q));
+    quadsStream.on("error", reject);
+  });
+
+  return {
+    head: {},
+    results: { quads },
   };
 }

@@ -2,16 +2,40 @@ import figlet from "figlet";
 import type { ModelMessage } from "ai";
 import { generateText, stepCountIs } from "ai";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createClient } from "@libsql/client";
 import { createServer } from "#/server/server.ts";
-import { createTestAccount, createTestContext } from "#/server/testing.ts";
+import { createTestAccount } from "#/server/testing.ts";
 import type { WorldsOptions } from "#/sdk/types.ts";
 import { InternalWorldsSdk } from "#/sdk/internal/sdk.ts";
+import { UniversalSentenceEncoderEmbeddings } from "#/server/embeddings/use.ts";
+import { createWorldsKvdex } from "#/server/db/kvdex.ts";
+import type { AppContext } from "#/server/app-context.ts";
 import { createTools, formatPrompt } from "./tools.ts";
 import systemPrompt from "./prompt.md" with { type: "text" };
 
+/**
+ * createExampleContext creates a custom app context for the example CLI.
+ */
+async function createExampleContext(): Promise<AppContext> {
+  const kv = await Deno.openKv(":memory:");
+  const db = createWorldsKvdex(kv);
+  const apiKey = "admin-api-key";
+
+  const client = createClient({ url: ":memory:" });
+  const embeddings = new UniversalSentenceEncoderEmbeddings();
+
+  return {
+    db,
+    kv,
+    admin: { apiKey },
+    libsqlClient: client,
+    embeddings,
+  };
+}
+
 if (import.meta.main) {
   // Set up in-memory world.
-  const appContext = await createTestContext();
+  const appContext = await createExampleContext();
   const server = await createServer(appContext);
   const worldsOptions: WorldsOptions = {
     baseUrl: "http://localhost/v1",
@@ -108,8 +132,17 @@ if (import.meta.main) {
 
         switch (call.toolName) {
           case "generateIri": {
+            const styles = [
+              "color: #94a3b8",
+              "color: #cbd5e1",
+              "color: #94a3b8",
+            ];
+            if (toolResult?.output) {
+              styles.push("color: #10b981");
+            }
+
             console.log(
-              `%c  generateIri(%c${
+              `%cgenerateIri(%c${
                 (call.input as { entityText?: string | undefined }).entityText
               }%c)${
                 (toolResult?.output as { iri?: string | undefined }).iri
@@ -118,42 +151,51 @@ if (import.meta.main) {
                   }`
                   : ""
               }`,
-              "color: #94a3b8",
-              "color: #cbd5e1",
-              "color: #94a3b8",
-              "color: #10b981",
+              ...styles,
             );
             break;
           }
 
           case "executeSparql": {
+            const styles = [
+              "color: #94a3b8",
+              "color: #cbd5e1",
+              "color: #94a3b8",
+            ];
+            if (toolResult?.output) {
+              styles.push("color: #10b981");
+            }
+
             console.log(
-              `%c  executeSparql(%c${
+              `%cexecuteSparql(%c${
                 (call.input as { sparql: string }).sparql.trim()
               }%c)${
                 toolResult?.output
                   ? ` => %c${JSON.stringify(toolResult?.output)}`
                   : ""
               }`,
-              "color: #94a3b8",
-              "color: #cbd5e1",
-              "color: #94a3b8",
-              "color: #10b981",
+              ...styles,
             );
             break;
           }
 
           case "searchFacts": {
+            const styles = [
+              "color: #94a3b8",
+              "color: #cbd5e1",
+              "color: #94a3b8",
+            ];
+            if (toolResult?.output) {
+              styles.push("color: #10b981");
+            }
+
             console.log(
-              `%c  searchFacts(%c${(call.input as { query: string }).query}%c)${
+              `%csearchFacts(%c${(call.input as { query: string }).query}%c)${
                 toolResult?.output
                   ? ` => %c${JSON.stringify(toolResult?.output)}`
                   : ""
               }`,
-              "color: #94a3b8",
-              "color: #cbd5e1",
-              "color: #94a3b8",
-              "color: #10b981",
+              ...styles,
             );
             break;
           }
