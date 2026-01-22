@@ -133,6 +133,7 @@ export interface SparqlQuadsResults {
 export interface ConversationRecord {
   id: string;
   worldId: string;
+  label?: string | null;
   createdAt: number;
   updatedAt: number;
   metadata?: Record<string, unknown>;

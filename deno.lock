@@ -6,8 +6,8 @@
     "jsr:@fartlabs/search-store@^0.0.2": "0.0.2",
     "jsr:@kitsonk/kv-toolbox@0.30": "0.30.0",
     "jsr:@olli/kvdex@^3.4.2": "3.4.2",
-    "jsr:@std/assert@1": "1.0.16",
-    "jsr:@std/assert@^1.0.16": "1.0.16",
+    "jsr:@std/assert@1": "1.0.17",
+    "jsr:@std/assert@^1.0.17": "1.0.17",
     "jsr:@std/bytes@1": "1.0.6",
     "jsr:@std/bytes@^1.0.3": "1.0.6",
     "jsr:@std/bytes@^1.0.4": "1.0.6",
@@ -23,7 +23,7 @@
     "jsr:@std/ulid@1": "1.0.0",
     "npm:@ai-sdk/google@^3.0.10": "3.0.10_zod@3.25.76",
     "npm:@comunica/query-sparql-rdfjs-lite@^5.1.0": "5.1.0",
-    "npm:@google/genai@^1.37.0": "1.37.0",
+    "npm:@google/genai@^1.38.0": "1.38.0",
     "npm:@libsql/client@0.17": "0.17.0",
     "npm:@rdfjs/types@^2.0.1": "2.0.1",
     "npm:@tensorflow-models/universal-sentence-encoder@*": "1.3.3_@tensorflow+tfjs-converter@3.21.0__@tensorflow+tfjs-core@3.21.0_@tensorflow+tfjs-core@3.21.0",
@@ -34,7 +34,7 @@
     "npm:@tensorflow/tfjs@^4.22.0": "4.22.0_@tensorflow+tfjs-core@4.22.0",
     "npm:@types/n3@*": "1.26.1",
     "npm:@types/n3@^1.26.1": "1.26.1",
-    "npm:ai@^6.0.42": "6.0.42_zod@3.25.76",
+    "npm:ai@^6.0.45": "6.0.45_zod@3.25.76",
     "npm:figlet@*": "1.9.4",
     "npm:figlet@^1.9.4": "1.9.4",
     "npm:n3@^2.0.1": "2.0.1",
@@ -86,8 +86,8 @@
         "npm:zod@^3.24.0"
       ]
     },
-    "@std/assert@1.0.16": {
-      "integrity": "6a7272ed1eaa77defe76e5ff63ca705d9c495077e2d5fd0126d2b53fc5bd6532",
+    "@std/assert@1.0.17": {
+      "integrity": "df5ebfffe77c03b3fa1401e11c762cc8f603d51021c56c4d15a8c7ab45e90dbe",
       "dependencies": [
         "jsr:@std/internal"
       ]
@@ -121,8 +121,8 @@
     }
   },
   "npm": {
-    "@ai-sdk/gateway@3.0.17_zod@3.25.76": {
-      "integrity": "sha512-mCz50GlBPyBV96Wcll1Mpaz56MVFuHL+bwRWGkIsCJwKAKIfdgUZecFzS3gckpHGaqP5+BYnmyJocIMzUhTQ2A==",
+    "@ai-sdk/gateway@3.0.19_zod@3.25.76": {
+      "integrity": "sha512-WOHGHclkcDN3VYJ3xBafa38uhmW+xRV8Hbe9LtEJKej3+qU3Hy1SUcptxsqfVACo1H1Nt5xRX7rEvoCHlwC8tw==",
       "dependencies": [
         "@ai-sdk/provider",
         "@ai-sdk/provider-utils",
@@ -2764,8 +2764,8 @@
         "kuler"
       ]
     },
-    "@google/genai@1.37.0": {
-      "integrity": "sha512-of85LwNqretPhBHHEljUY05OSsQVUPyw5n1RdNkUpKR36kgHq7CVVEGY4GplVbFaqbdT3DXfLSv5B/Avbe5vXw==",
+    "@google/genai@1.38.0": {
+      "integrity": "sha512-V/4CQVQGovvGHuS73lwJwHKR9x33kCij3zz/ReEQ4A7RJaV0U7m4k1mvYhFk55cGZdF5JLKu2S9BTaFuEs5xTA==",
       "dependencies": [
         "google-auth-library",
         "protobufjs",
@@ -3233,8 +3233,8 @@
     "agent-base@7.1.4": {
       "integrity": "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="
     },
-    "ai@6.0.42_zod@3.25.76": {
-      "integrity": "sha512-o+MVN7HBE4HEnhtN7nBt9WO1iISI6svyWNoOuY6WiXCdHuZfSGN4MUQ3QwjWz1Ue5gtBEcvwX5XFhgAwlPAxxw==",
+    "ai@6.0.45_zod@3.25.76": {
+      "integrity": "sha512-8QFU1cFY25Z7M72gpw4pzkvyEXK4X1oO3ZRUQYofU4hs742rt+NMAmgNn2uZo/cMtEH5Dt1Vlu/fMQXmLnRoZQ==",
       "dependencies": [
         "@ai-sdk/gateway",
         "@ai-sdk/provider",
@@ -4438,17 +4438,17 @@
       "jsr:@fartlabs/search-store@^0.0.2",
       "jsr:@kitsonk/kv-toolbox@0.30",
       "jsr:@olli/kvdex@^3.4.2",
-      "jsr:@std/assert@^1.0.16",
+      "jsr:@std/assert@^1.0.17",
       "jsr:@std/ulid@1",
       "npm:@ai-sdk/google@^3.0.10",
       "npm:@comunica/query-sparql-rdfjs-lite@^5.1.0",
-      "npm:@google/genai@^1.37.0",
+      "npm:@google/genai@^1.38.0",
       "npm:@libsql/client@0.17",
       "npm:@tensorflow-models/universal-sentence-encoder@^1.3.3",
       "npm:@tensorflow/tfjs-backend-wasm@^4.22.0",
       "npm:@tensorflow/tfjs@^4.22.0",
       "npm:@types/n3@^1.26.1",
-      "npm:ai@^6.0.42",
+      "npm:ai@^6.0.45",
       "npm:figlet@^1.9.4",
       "npm:n3@^2.0.1",
       "npm:zod@^4.3.5"

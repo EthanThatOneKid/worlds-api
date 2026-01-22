@@ -109,33 +109,54 @@ export type WorldBlob = z.infer<typeof worldBlobSchema>;
  */
 export const worldBlobSchema = z.instanceof(Uint8Array);
 
+/**
+ * Conversation is the type of a conversation.
+ */
 export type Conversation = z.infer<typeof conversationSchema>;
 
+/**
+ * conversationSchema is the schema for a conversation.
+ *
+ * A conversation is a series of messages in a world.
+ */
 export const conversationSchema = z.object({
   id: z.string(),
   worldId: z.string(),
+  label: z.string().nullish(),
   createdAt: z.number(),
   updatedAt: z.number(),
   metadata: z.any().nullish(),
 });
 
+/**
+ * textPartSchema is the schema for a text part of a message.
+ */
 const textPartSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
 });
 
+/**
+ * imagePartSchema is the schema for an image part of a message.
+ */
 const imagePartSchema = z.object({
   type: z.literal("image"),
   image: z.union([z.string(), z.instanceof(Uint8Array)]),
   mimeType: z.string().optional(),
 });
 
+/**
+ * filePartSchema is the schema for a file part of a message.
+ */
 const filePartSchema = z.object({
   type: z.literal("file"),
   data: z.union([z.string(), z.instanceof(Uint8Array)]),
   mimeType: z.string(),
 });
 
+/**
+ * toolCallPartSchema is the schema for a tool call part of a message.
+ */
 const toolCallPartSchema = z.object({
   type: z.literal("tool-call"),
   toolCallId: z.string(),
@@ -143,6 +164,9 @@ const toolCallPartSchema = z.object({
   args: z.any(),
 });
 
+/**
+ * toolResultPartSchema is the schema for a tool result part of a message.
+ */
 const toolResultPartSchema = z.object({
   type: z.literal("tool-result"),
   toolCallId: z.string(),
@@ -151,6 +175,11 @@ const toolResultPartSchema = z.object({
   isError: z.boolean().optional(),
 });
 
+/**
+ * modelMessageSchema is the schema for a model message.
+ *
+ * A message can be from the system, user, assistant, or a tool.
+ */
 const modelMessageSchema = z.union([
   z.object({
     role: z.literal("system"),
@@ -176,8 +205,16 @@ const modelMessageSchema = z.union([
   }),
 ]);
 
+/**
+ * Message is the type of a message.
+ */
 export type Message = z.infer<typeof messageSchema>;
 
+/**
+ * messageSchema is the schema for a message.
+ *
+ * A message belongs to a conversation in a world.
+ */
 export const messageSchema = z.object({
   id: z.string(),
   worldId: z.string(),
