@@ -1,6 +1,6 @@
 {
   "name": "@fartlabs/worlds",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "exports": {
     ".": "./src/sdk/mod.ts",
     "./internal": "./src/sdk/internal/mod.ts",
@@ -8,8 +8,8 @@
   },
   "imports": {
     "#/": "./src/",
-    "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.10",
-    "@ai-sdk/anthropic": "npm:@ai-sdk/anthropic@^3.0.18",
+    "@ai-sdk/google": "npm:@ai-sdk/google@^3.0.13",
+    "@ai-sdk/anthropic": "npm:@ai-sdk/anthropic@^3.0.23",
     "@comunica/query-sparql-rdfjs-lite": "npm:@comunica/query-sparql-rdfjs-lite@^5.1.0",
     "@fartlabs/rt": "jsr:@fartlabs/rt@^0.0.11",
     "@fartlabs/search-store": "jsr:@fartlabs/search-store@^0.0.2",
@@ -24,10 +24,10 @@
     "@tensorflow/tfjs": "npm:@tensorflow/tfjs@^4.22.0",
     "@tensorflow/tfjs-backend-wasm": "npm:@tensorflow/tfjs-backend-wasm@^4.22.0",
     "@types/n3": "npm:@types/n3@^1.26.1",
-    "ai": "npm:ai@^6.0.45",
+    "ai": "npm:ai@^6.0.48",
     "cfonts": "npm:cfonts@^3.3.1",
     "n3": "npm:n3@^2.0.1",
-    "zod": "npm:zod@^4.3.5",
+    "zod": "npm:zod@^4.3.6",
     "deno_tree_sitter": "https://deno.land/x/deno_tree_sitter@1.0.1.2/main/main.js",
     "common_tree_sitter_languages/": "https://esm.sh/gh/jeff-hykin/common_tree_sitter_languages@8eeb010ee5edb3dea6ac41f98432815e9e70f211/main/"
   },
