@@ -220,19 +220,26 @@ export class Worlds {
    * search searches a world.
    */
   public async search(
-    worldId: string,
+    worldIds: string | string[] | undefined,
     query: string,
     options?: {
       limit?: number;
       accountId?: string;
     },
   ): Promise<WorldsSearchResult[]> {
-    const url = new URL(`${this.options.baseUrl}/worlds/${worldId}/search`);
+    const url = new URL(`${this.options.baseUrl}/search`);
     if (options?.accountId) {
       url.searchParams.set("account", options.accountId);
     }
 
     url.searchParams.set("q", query);
+    if (worldIds) {
+      const worldIdsParam = Array.isArray(worldIds)
+        ? worldIds.join(",")
+        : worldIds;
+      url.searchParams.set("worlds", worldIdsParam);
+    }
+
     if (options?.limit) {
       url.searchParams.set("limit", options.limit.toString());
     }
@@ -244,7 +251,7 @@ export class Worlds {
     });
     if (!response.ok) {
       throw new Error(
-        `Failed to search world: ${response.status} ${response.statusText}`,
+        `Failed to search: ${response.status} ${response.statusText}`,
       );
     }
 

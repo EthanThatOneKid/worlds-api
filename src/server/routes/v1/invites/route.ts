@@ -171,7 +171,7 @@ export default (appContext: AppContext) =>
 
         // Check if user already has a plan
         const account = authorized.account.value;
-        if (account.plan) {
+        if (account.plan && account.plan !== "shadow") {
           return new Response("Account already has a plan", { status: 409 });
         }
 

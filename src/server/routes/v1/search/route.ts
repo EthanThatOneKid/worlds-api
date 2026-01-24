@@ -6,13 +6,8 @@ import { checkRateLimit } from "#/server/middleware/rate-limit.ts";
 
 export default (appContext: AppContext) => {
   return new Router().get(
-    "/v1/worlds/:world/search",
+    "/v1/search",
     async (ctx) => {
-      const worldId = ctx.params?.pathname.groups.world;
-      if (!worldId) {
-        return new Response("World ID required", { status: 400 });
-      }
-
       const authorized = await authorizeRequest(appContext, ctx.request);
       if (!authorized.account && !authorized.admin) {
         return new Response("Unauthorized", { status: 401 });
@@ -24,13 +19,45 @@ export default (appContext: AppContext) => {
         return new Response("Query required", { status: 400 });
       }
 
-      const worldResult = await appContext.db.worlds.find(worldId);
-      if (
-        !worldResult || worldResult.value.deletedAt != null ||
-        (worldResult.value.accountId !== authorized.account?.id &&
-          !authorized.admin)
-      ) {
-        return new Response("World not found", { status: 404 });
+      const worldIdsParam = url.searchParams.get("worlds");
+      const worldIds = worldIdsParam ? worldIdsParam.split(",") : undefined;
+      const validWorldIds: string[] = [];
+      let accountId: string | undefined;
+
+      if (worldIds) {
+        for (const worldId of worldIds) {
+          const worldResult = await appContext.db.worlds.find(worldId);
+          if (
+            !worldResult || worldResult.value.deletedAt != null ||
+            (worldResult.value.accountId !== authorized.account?.id &&
+              !authorized.admin)
+          ) {
+            continue;
+          }
+          validWorldIds.push(worldId);
+          if (!accountId) {
+            accountId = worldResult.value.accountId;
+          }
+        }
+      }
+
+      if (worldIds && validWorldIds.length === 0) {
+        return new Response("No valid worlds found", { status: 404 });
+      }
+
+      if (!accountId) {
+        if (authorized.account) {
+          accountId = authorized.account.id;
+        } else if (authorized.admin) {
+          const accountParam = url.searchParams.get("account");
+          if (accountParam) {
+            accountId = accountParam;
+          } else {
+            return new Response("Account ID required for admin search", {
+              status: 400,
+            });
+          }
+        }
       }
 
       // Apply rate limiting if account is present
@@ -40,11 +67,11 @@ export default (appContext: AppContext) => {
           rateLimitHeaders = await checkRateLimit(
             appContext,
             authorized.account.id,
-            worldId,
+            validWorldIds[0] ?? "global",
             { resourceType: "search" },
           );
         } catch (error) {
-          if (error instanceof Response) return error; // 429 response
+          if (error instanceof Response) return error;
           throw error;
         }
       }
@@ -58,8 +85,8 @@ export default (appContext: AppContext) => {
       const limit = url.searchParams.get("limit");
       try {
         const results = await store.search(query, {
-          accountId: worldResult.value.accountId,
-          worldIds: [worldId],
+          accountId: accountId!,
+          worldIds: validWorldIds.length > 0 ? validWorldIds : undefined,
           limit: limit ? parseInt(limit, 10) : undefined,
         });
         return new Response(JSON.stringify(results), {

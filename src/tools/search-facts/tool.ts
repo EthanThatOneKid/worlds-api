@@ -25,7 +25,7 @@ export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
       ),
     }),
     execute: async ({ query, limit }) => {
-      return await worlds.search(options.worldId, query, {
+      return await worlds.search(options.worldIds, query, {
         limit: limit ?? 10,
       });
     },

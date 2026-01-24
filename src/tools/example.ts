@@ -56,10 +56,10 @@ if (import.meta.main) {
   // Set up tools.
   const tools = createTools({
     ...worldsOptions,
-    worldId: worldRecord.id,
+    worldIds: [worldRecord.id],
   });
 
-  // Set up AI.
+  // Set up AI agent.
   const messages: ModelMessage[] = [];
 
   const googleKey = Deno.env.get("GOOGLE_API_KEY");

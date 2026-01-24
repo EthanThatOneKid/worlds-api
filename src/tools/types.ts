@@ -5,9 +5,9 @@ import type { WorldsOptions } from "#/sdk/mod.ts";
  */
 export interface CreateToolsOptions extends WorldsOptions {
   /**
-   * worldId is the ID of the world.
+   * worldIds are the IDs of the worlds.
    */
-  worldId: string;
+  worldIds: string[];
 
   /**
    * generateIri is a function that generates an IRI for new entities.

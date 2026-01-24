@@ -12,9 +12,6 @@ export function generateIri(generateId: () => string = ulid): string {
   return `https://wazoo.tech/.well-known/genid/${generateId()}`;
 }
 
-/**
- * createTools creates a set of tools for a world.
- */
 export function createTools(options: CreateToolsOptions): {
   executeSparql: ReturnType<typeof createExecuteSparqlTool>;
   searchFacts: ReturnType<typeof createSearchFactsTool>;

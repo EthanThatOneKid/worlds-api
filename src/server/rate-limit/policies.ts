@@ -114,18 +114,46 @@ export const Policies: Record<string, PlanPolicy> = {
       maxWorldSize: 100, // 100 bytes
     },
   },
+  shadow: {
+    rateLimits: {
+      sparql_query: {
+        interval: 60 * 1000,
+        capacity: 0,
+        refillRate: 0,
+      },
+      sparql_update: {
+        interval: 60 * 1000,
+        capacity: 0,
+        refillRate: 0,
+      },
+      search: {
+        interval: 60 * 1000,
+        capacity: 0,
+        refillRate: 0,
+      },
+      world_download: {
+        interval: 60 * 1000,
+        capacity: 0,
+        refillRate: 0,
+      },
+    },
+    worldLimits: {
+      maxWorlds: 0,
+      maxWorldSize: 0,
+    },
+  },
 };
 
 /**
  * DefaultPolicy is the fallback policy if no plan is found.
  */
-export const DefaultPolicy = Policies.free;
+export const DefaultPolicy = Policies.shadow;
 
 /**
  * getPlanPolicy returns the policy for a given plan.
  */
 export function getPlanPolicy(planName: string | null): PlanPolicy {
-  return Policies[planName || "free"] || DefaultPolicy;
+  return Policies[planName ?? "shadow"] ?? DefaultPolicy;
 }
 
 /**
@@ -136,5 +164,5 @@ export function getPolicy(
   resource: ResourceType,
 ): RateLimitPolicy {
   const policy = getPlanPolicy(planName);
-  return policy.rateLimits[resource] || DefaultPolicy.rateLimits[resource];
+  return policy.rateLimits[resource] ?? DefaultPolicy.rateLimits[resource];
 }

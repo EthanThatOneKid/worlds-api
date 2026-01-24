@@ -195,6 +195,48 @@ Deno.test("Invites API routes - Redemption", async (t) => {
     assert(invite?.value.redeemedAt);
   });
 
+  await t.step("Redeem invite upgrades shadow plan to free", async () => {
+    // Create an account with 'shadow' plan
+    const userApiKey = ulid();
+    const accountResult = await testContext.db.accounts.add({
+      id: "acc_shadow_plan",
+      description: "Account with shadow plan",
+      plan: "shadow",
+      apiKey: userApiKey,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+    assert(accountResult.ok);
+
+    // Create an invite
+    await testContext.db.invites.add({
+      code: "redeem_shadow_test_invite",
+      createdAt: Date.now(),
+      redeemedBy: null,
+      redeemedAt: null,
+    });
+
+    // Redeem the invite
+    const req = new Request(
+      "http://localhost/v1/invites/redeem_shadow_test_invite/redeem",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${userApiKey}`,
+        },
+      },
+    );
+    const res = await app.fetch(req);
+    assertEquals(res.status, 200);
+
+    const body = await res.json();
+    assertEquals(body.plan, "free");
+
+    // Verify account plan was updated
+    const account = await testContext.db.accounts.find("acc_shadow_plan");
+    assertEquals(account?.value.plan, "free");
+  });
+
   await t.step("Redeem already redeemed invite returns 410", async () => {
     // Create an account with no plan
     const userApiKey = ulid();
