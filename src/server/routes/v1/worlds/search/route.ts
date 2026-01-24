@@ -55,10 +55,12 @@ export default (appContext: AppContext) => {
       });
       await store.createTablesIfNotExists();
 
+      const limit = url.searchParams.get("limit");
       try {
         const results = await store.search(query, {
           accountId: worldResult.value.accountId,
           worldIds: [worldId],
+          limit: limit ? parseInt(limit, 10) : undefined,
         });
         return new Response(JSON.stringify(results), {
           headers: {

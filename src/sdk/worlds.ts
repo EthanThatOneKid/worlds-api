@@ -145,9 +145,9 @@ export class Worlds {
   }
 
   /**
-   * remove removes a world from the Worlds API.
+   * delete deletes a world from the Worlds API.
    */
-  public async remove(
+  public async delete(
     worldId: string,
     options?: { accountId?: string },
   ): Promise<void> {
@@ -225,7 +225,7 @@ export class Worlds {
       limit?: number;
       accountId?: string;
     },
-  ): Promise<WorldsSearchResult | null> {
+  ): Promise<WorldsSearchResult[]> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}/search`);
     if (options?.accountId) {
       url.searchParams.set("account", options.accountId);

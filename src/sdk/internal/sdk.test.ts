@@ -2,6 +2,7 @@ import { assert, assertEquals } from "@std/assert";
 import { InternalWorldsSdk } from "./sdk.ts";
 import { createServer } from "#/server/server.ts";
 import { createTestAccount, createTestContext } from "#/server/testing.ts";
+import type { SparqlSelectResults } from "#/sdk/types.ts";
 
 Deno.test("InternalWorldsSdk - Accounts", async (t) => {
   const appContext = await createTestContext();
@@ -28,6 +29,26 @@ Deno.test("InternalWorldsSdk - Accounts", async (t) => {
     assert(account !== null);
     assertEquals(account.id, "acc_sdk_test");
     assertEquals(account.description, "SDK Test Account");
+
+    const nonExistent = await sdk.accounts.get("non_existent");
+    assertEquals(nonExistent, null);
+  });
+
+  await t.step("list accounts pagination", async () => {
+    // Create more accounts for pagination
+    await sdk.accounts.create({ id: "acc_page_1" });
+    await sdk.accounts.create({ id: "acc_page_2" });
+
+    const page1 = await sdk.accounts.list(1, 1);
+    assertEquals(page1.length, 1);
+
+    const page2 = await sdk.accounts.list(2, 1);
+    assertEquals(page2.length, 1);
+    assert(page1[0].id !== page2[0].id);
+
+    // Clean up
+    await sdk.accounts.delete("acc_page_1");
+    await sdk.accounts.delete("acc_page_2");
   });
 
   await t.step("list accounts", async () => {
@@ -97,10 +118,17 @@ Deno.test("InternalWorldsSdk - Worlds", async (t) => {
     assertEquals(world.label, "SDK World");
   });
 
-  await t.step("list worlds", async () => {
-    const worlds = await sdk.worlds.list();
-    const found = worlds.find((w) => w.id === worldId);
-    assert(found !== undefined);
+  await t.step("list worlds pagination", async () => {
+    // Create more worlds for pagination
+    await sdk.worlds.create({ label: "World 1" });
+    await sdk.worlds.create({ label: "World 2" });
+
+    const page1 = await sdk.worlds.list(1, 1);
+    assertEquals(page1.length, 1);
+
+    const page2 = await sdk.worlds.list(2, 1);
+    assertEquals(page2.length, 1);
+    assert(page1[0].id !== page2[0].id);
   });
 
   await t.step("update world", async () => {
@@ -113,43 +141,49 @@ Deno.test("InternalWorldsSdk - Worlds", async (t) => {
   });
 
   await t.step("search world", async () => {
-    // Mock search probably won't return anything meaningful without embeddings setup,
-    // but we can check it doesn't crash
-    const results = await sdk.worlds.search(worldId, "test");
-    if (results !== null) {
-      assert(Array.isArray(results));
-    }
+    // 1. Insert some facts to search for
+    await sdk.worlds.sparql(
+      worldId,
+      `INSERT DATA { 
+        <http://example.org/a> <http://example.org/p> "Apple" .
+        <http://example.org/b> <http://example.org/p> "Banana" .
+      }`,
+    );
+
+    // 2. Search with limit 1
+    const results = await sdk.worlds.search(worldId, "fruit", { limit: 1 });
+    assert(Array.isArray(results));
+    // Note: In tests, the mock search might return all results if not fully implemented,
+    // but the server route should enforce the limit from store.search.
+    assert(results.length <= 1);
   });
 
-  await t.step("sparql update and query", async () => {
-    // 1. Insert data via SPARQL Update
+  await t.step("sparql update", async () => {
     const updateQuery = `
       INSERT DATA {
-        <http://example.org/subject> <http://example.org/predicate> "Create Object" .
+        <http://example.org/subject> <http://example.org/predicate> "Update Object" .
       }
     `;
-    await sdk.worlds.sparql(worldId, updateQuery);
+    const result = await sdk.worlds.sparql(worldId, updateQuery);
+    assertEquals(result, null);
+  });
 
-    // 2. Query data via SPARQL Query
+  await t.step("sparql query", async () => {
     const selectQuery = `
       SELECT ?s ?p ?o WHERE {
-        ?s ?p ?o
+        <http://example.org/subject> <http://example.org/predicate> ?o
       }
     `;
-
     const result = await sdk.worlds.sparql(
       worldId,
       selectQuery,
-      // deno-lint-ignore no-explicit-any
-    ) as any;
+    ) as SparqlSelectResults;
     assert(result.results.bindings.length > 0);
-
-    const binding = result.results.bindings[0];
-    assertEquals(binding.o.value, "Create Object");
+    assertEquals(result.results.bindings[0].o.value, "Update Object");
   });
 
   await t.step("delete world", async () => {
-    await sdk.worlds.remove(worldId);
+    await sdk.worlds.delete(worldId);
     const world = await sdk.worlds.get(worldId);
     assertEquals(world, null);
   });
@@ -288,7 +322,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
     assert(result.ok);
 
     // Delete using admin override
-    await adminSdk.worlds.remove(result.id, { accountId: accountB.id });
+    await adminSdk.worlds.delete(result.id, { accountId: accountB.id });
 
     // Verify deletion
     const world = await appContext.db.worlds.find(result.id);
@@ -323,8 +357,7 @@ Deno.test("InternalWorldsSdk - Admin Account Override", async (t) => {
         worldId,
         "SELECT * WHERE { ?s ?p ?o }",
         { accountId: accountA.id },
-        // deno-lint-ignore no-explicit-any
-      ) as any;
+      ) as SparqlSelectResults;
 
       assert(queryResult.results.bindings.length > 0);
 
@@ -385,6 +418,25 @@ Deno.test("InternalWorldsSdk - Invites", async (t) => {
     const invite = await sdk.invites.get("sdk_invite_test");
     assert(invite !== null);
     assertEquals(invite.code, "sdk_invite_test");
+
+    const nonExistent = await sdk.invites.get("non_existent_code");
+    assertEquals(nonExistent, null);
+  });
+
+  await t.step("list invites pagination", async () => {
+    await sdk.invites.create({ code: "invite_page_1" });
+    await sdk.invites.create({ code: "invite_page_2" });
+
+    const page1 = await sdk.invites.list(1, 1);
+    assertEquals(page1.length, 1);
+
+    const page2 = await sdk.invites.list(2, 1);
+    assertEquals(page2.length, 1);
+    assert(page1[0].code !== page2[0].code);
+
+    // Clean up
+    await sdk.invites.delete("invite_page_1");
+    await sdk.invites.delete("invite_page_2");
   });
 
   await t.step("list invites", async () => {

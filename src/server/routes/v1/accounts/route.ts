@@ -6,6 +6,7 @@ import {
   createAccountParamsSchema,
   updateAccountParamsSchema,
 } from "#/server/schemas.ts";
+import { LibsqlSearchStoreManager } from "#/server/search/libsql.ts";
 
 export default (appContext: AppContext) =>
   new Router()
@@ -184,6 +185,14 @@ export default (appContext: AppContext) =>
           return new Response("Account ID required", { status: 400 });
         }
 
+        // Cleanup search data
+        const searchStore = new LibsqlSearchStoreManager({
+          client: appContext.libsqlClient,
+          embeddings: appContext.embeddings,
+        });
+        await searchStore.createTablesIfNotExists();
+        await searchStore.deleteAccount(accountId);
+
         await appContext.db.accounts.delete(accountId);
         return new Response(null, { status: 204 });
       },
@@ -199,6 +208,11 @@ export default (appContext: AppContext) =>
         const accountId = ctx.params?.pathname.groups.account;
         if (!accountId) {
           return new Response("Account ID required", { status: 400 });
+        }
+
+        // Security Check: Only admins or the account owner can rotate the key.
+        if (!authorized.admin && authorized.account?.id !== accountId) {
+          return new Response("Forbidden: Permission denied", { status: 403 });
         }
 
         const apiKey = ulid();

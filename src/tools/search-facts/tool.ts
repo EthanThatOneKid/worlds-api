@@ -11,7 +11,7 @@ import type { CreateToolsOptions } from "#/tools/types.ts";
 export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
   query: string;
   limit?: number | undefined;
-}, WorldsSearchResult | null> {
+}, WorldsSearchResult[]> {
   const worlds = new Worlds(options);
   return tool({
     description:
