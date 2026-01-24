@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "@std/assert";
+import { assertEquals } from "@std/assert";
 import { createTestAccount, createTestContext } from "#/server/testing.ts";
 import createWorldsRoute from "./route.ts";
 import createSparqlRoute from "./sparql/route.ts";
@@ -10,7 +10,7 @@ Deno.test("World Limits - World Count", async (t) => {
 
   await t.step("rejects world creation when limit is reached", async () => {
     // Create account with 'test' plan (limit: 2 worlds)
-    const { id: accountId, apiKey } = await createTestAccount(db, {
+    const { id: _accountId, apiKey } = await createTestAccount(db, {
       plan: "test",
     });
 
@@ -68,7 +68,7 @@ Deno.test("World Limits - World Size", async (t) => {
     "rejects sparql update when blob size exceeds limit",
     async () => {
       // Create account with 'test' plan (limit: 100 bytes)
-      const { id: accountId, apiKey } = await createTestAccount(db, {
+      const { id: _accountId, apiKey } = await createTestAccount(db, {
         plan: "test",
       });
 

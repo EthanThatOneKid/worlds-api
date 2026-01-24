@@ -1,7 +1,7 @@
 import type { Tool } from "ai";
 import { tool } from "ai";
 import { z } from "zod";
-import type { SearchResult } from "#/sdk/types.ts";
+import type { WorldsSearchResult } from "#/sdk/types.ts";
 import { Worlds } from "#/sdk/worlds.ts";
 import type { CreateToolsOptions } from "#/tools/types.ts";
 
@@ -11,7 +11,7 @@ import type { CreateToolsOptions } from "#/tools/types.ts";
 export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
   query: string;
   limit?: number | undefined;
-}, SearchResult> {
+}, WorldsSearchResult | null> {
   const worlds = new Worlds(options);
   return tool({
     description:

@@ -1,4 +1,4 @@
-import type { SearchResult as _SearchResult } from "@fartlabs/search-store";
+import type { SearchResult } from "@fartlabs/search-store";
 
 /**
  * WorldsOptions are the options for the Worlds API SDK.
@@ -18,13 +18,20 @@ export interface WorldsOptions {
 // TODO: Update SearchResultItem type for consistency with RDF/JS term types.
 
 /**
- * SearchResult represents a search result.
+ * WorldsSearchResult represents a search result.
  */
-export type SearchResult = _SearchResult<{
+export type WorldsSearchResult = SearchResult<WorldsSearchResultItem>;
+
+/**
+ * WorldsSearchResultItem represents a search result item.
+ */
+export interface WorldsSearchResultItem {
+  accountId: string;
+  worldId: string;
   subject: string;
   predicate: string;
   object: string;
-}>;
+}
 
 /**
  * CreateWorldParams represents the parameters for creating a world.

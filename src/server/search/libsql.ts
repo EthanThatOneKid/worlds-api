@@ -56,6 +56,9 @@ export interface LibsqlSearchStoreManagerOptions {
 /**
  * LibsqlSearchStoreManager implements search across all accounts and worlds using a single Libsql table.
  * Logic isolation is enforced via accountId and worldId columns.
+ *
+ * TODO: Consider hash-based siloing (e.g. search_documents_silo_N) if the global table
+ * grows too large, to keep index sizes manageable while avoiding per-account table limits.
  */
 export class LibsqlSearchStoreManager {
   public constructor(
@@ -63,7 +66,7 @@ export class LibsqlSearchStoreManager {
   ) {}
 
   /**
-   * Creates the necessary tables and indexes if they don't exist.
+   * createTablesIfNotExists creates the necessary tables and indexes if they don't exist.
    */
   public async createTablesIfNotExists(): Promise<void> {
     await this.options.client.batch([
@@ -80,6 +83,8 @@ export class LibsqlSearchStoreManager {
           UNIQUE(accountId, worldId, subject, predicate, object)
         )`,
       },
+      // TODO: Monitor for native metadata filtering support in Libsql/Turso (sqlite-vec).
+      // Once available, use PARTITION KEY on accountId to replace internal recall buffer hacks.
 
       // Index on accountId and worldId for efficient lookups/filtering.
       {
@@ -128,7 +133,7 @@ export class LibsqlSearchStoreManager {
   }
 
   /**
-   * Deletes all documents for a specific account.
+   * deleteAccount deletes all documents for a specific account.
    */
   public async deleteAccount(accountId: string): Promise<void> {
     await this.options.client.execute({
@@ -138,7 +143,7 @@ export class LibsqlSearchStoreManager {
   }
 
   /**
-   * Deletes all documents for a specific world within an account.
+   * deleteWorld deletes all documents for a specific world within an account.
    */
   public async deleteWorld(accountId: string, worldId: string): Promise<void> {
     await this.options.client.execute({
@@ -148,7 +153,7 @@ export class LibsqlSearchStoreManager {
   }
 
   /**
-   * Patches documents for a specific world.
+   * patch patches documents for a specific world.
    */
   public async patch(
     accountId: string,
@@ -192,7 +197,7 @@ export class LibsqlSearchStoreManager {
   }
 
   /**
-   * Searches documents across specified worlds of an account.
+   * search searches documents across specified worlds of an account.
    *
    * @param query - The search query text
    * @param options.accountId - Required account ID for isolation
@@ -201,6 +206,7 @@ export class LibsqlSearchStoreManager {
    * @param options.weightFts - Weight for FTS results in RRF (default: 1.0)
    * @param options.weightVec - Weight for vector results in RRF (default: 1.0)
    * @param options.rrfK - RRF constant k (default: 60)
+   * @param options.recallBuffer - Multiplier for internal vector search limit (default: 10)
    */
   public async search(
     query: string,
@@ -211,6 +217,7 @@ export class LibsqlSearchStoreManager {
       weightFts?: number;
       weightVec?: number;
       rrfK?: number;
+      recallBuffer?: number;
     },
   ): Promise<LibsqlSearchResult[]> {
     const {
@@ -220,13 +227,16 @@ export class LibsqlSearchStoreManager {
       weightFts = 1.0,
       weightVec = 1.0,
       rrfK = 60,
+      recallBuffer = 10,
     } = options;
     const embedding = await this.options.embeddings.embed(query);
     const vectorString = JSON.stringify(embedding);
 
     // Use a larger internal limit for vector search to improve recall
     // This helps ensure tenant-specific results aren't filtered out by global ranking
-    const internalVectorLimit = limit * 10;
+    // TODO: Implement tiered recall buffer multiplier based on total document count per account
+    // or global skew to maintain high recall for smaller tenants.
+    const internalVectorLimit = limit * recallBuffer;
 
     // Build base WHERE clause for account isolation.
     let accessFilter = "WHERE search_documents.accountId = ?";

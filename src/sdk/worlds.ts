@@ -1,10 +1,10 @@
 import type {
   CreateWorldParams,
-  SearchResult,
   SparqlResult,
   UpdateWorldParams,
   WorldRecord,
   WorldsOptions,
+  WorldsSearchResult,
 } from "./types.ts";
 
 /**
@@ -223,10 +223,9 @@ export class Worlds {
     query: string,
     options?: {
       limit?: number;
-      offset?: number;
       accountId?: string;
     },
-  ): Promise<SearchResult> {
+  ): Promise<WorldsSearchResult | null> {
     const url = new URL(`${this.options.baseUrl}/worlds/${worldId}/search`);
     if (options?.accountId) {
       url.searchParams.set("account", options.accountId);
@@ -235,10 +234,6 @@ export class Worlds {
     url.searchParams.set("q", query);
     if (options?.limit) {
       url.searchParams.set("limit", options.limit.toString());
-    }
-
-    if (options?.offset) {
-      url.searchParams.set("offset", options.offset.toString());
     }
 
     const response = await this.fetch(url, {

@@ -116,7 +116,9 @@ Deno.test("InternalWorldsSdk - Worlds", async (t) => {
     // Mock search probably won't return anything meaningful without embeddings setup,
     // but we can check it doesn't crash
     const results = await sdk.worlds.search(worldId, "test");
-    assert(Array.isArray(results));
+    if (results !== null) {
+      assert(Array.isArray(results));
+    }
   });
 
   await t.step("sparql update and query", async () => {

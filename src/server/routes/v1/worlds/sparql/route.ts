@@ -147,8 +147,9 @@ class BufferedPatchHandler implements PatchHandler {
 
   constructor(private readonly handler: PatchHandler) {}
 
-  public async patch(patches: Patch[]): Promise<void> {
+  public patch(patches: Patch[]): Promise<void> {
     this.patches.push(...patches);
+    return Promise.resolve();
   }
 
   public async commit(): Promise<void> {
