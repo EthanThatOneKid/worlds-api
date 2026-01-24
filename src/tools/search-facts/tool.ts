@@ -5,12 +5,15 @@ import type { WorldsSearchResult } from "#/sdk/types.ts";
 import { Worlds } from "#/sdk/worlds.ts";
 import type { CreateToolsOptions } from "#/tools/types.ts";
 
+// TODO: Add worldIds (optional, falls back to options.worldIds) to input schema. Specify which worlds to search.
+
 /**
  * createSearchFactsTool creates a search facts tool for a world.
  */
 export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
   query: string;
   limit?: number | undefined;
+  worldIds?: string[] | undefined;
 }, WorldsSearchResult[]> {
   const worlds = new Worlds(options);
   return tool({
@@ -25,10 +28,13 @@ Each result includes the fact (subject, predicate, object), a relevance score, a
       limit: z.number().min(1).max(100).optional().describe(
         "Maximum number of facts to return (default: 10). Use lower limits for focused searches, higher limits when exploring broadly.",
       ),
+      worldIds: z.array(z.string()).optional().describe(
+        "Optional list of world IDs to search within. If not provided, searches all configured worlds.",
+      ),
     }),
-    execute: async ({ query, limit }) => {
+    execute: async ({ query, limit, worldIds }) => {
       return await worlds.search(query, {
-        worldIds: options.worldIds,
+        worldIds: worldIds ?? options.worldIds,
         limit: limit ?? 10,
       });
     },
