@@ -182,6 +182,21 @@ Deno.test("InternalWorldsSdk - Worlds", async (t) => {
     assertEquals(result.results.bindings[0].o.value, "Update Object");
   });
 
+  await t.step("download world", async () => {
+    // 1. Add some data if not already there (should be there from previous steps)
+    // 2. Download in default format (N-Quads)
+    const nQuadsBuffer = await sdk.worlds.download(worldId);
+    const nQuads = new TextDecoder().decode(nQuadsBuffer);
+    assert(nQuads.includes("http://example.org/subject"));
+
+    // 3. Download in Turtle format
+    const turtleBuffer = await sdk.worlds.download(worldId, {
+      format: "turtle",
+    });
+    const turtle = new TextDecoder().decode(turtleBuffer);
+    assert(turtle.includes("<http://example.org/subject>"));
+  });
+
   await t.step("delete world", async () => {
     await sdk.worlds.delete(worldId);
     const world = await sdk.worlds.get(worldId);

@@ -1,5 +1,6 @@
 import type {
   CreateWorldParams,
+  RdfFormat,
   SparqlResult,
   UpdateWorldParams,
   WorldRecord,
@@ -248,5 +249,43 @@ export class Worlds {
     }
 
     return await response.json();
+  }
+
+  /**
+   * download downloads a world in the specified RDF format.
+   *
+   * @example
+   * ```ts
+   * const buffer = await sdk.worlds.download(worldId, { format: "turtle" });
+   * const text = new TextDecoder().decode(buffer);
+   * ```
+   */
+  public async download(
+    worldId: string,
+    options?: { format?: RdfFormat; accountId?: string },
+  ): Promise<ArrayBuffer> {
+    const url = new URL(
+      `${this.options.baseUrl}/worlds/${worldId}/download`,
+    );
+    if (options?.accountId) {
+      url.searchParams.set("account", options.accountId);
+    }
+    if (options?.format) {
+      url.searchParams.set("format", options.format);
+    }
+
+    const response = await this.fetch(url, {
+      headers: {
+        Authorization: `Bearer ${this.options.apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to download world: ${response.status} ${response.statusText}`,
+      );
+    }
+
+    return await response.arrayBuffer();
   }
 }

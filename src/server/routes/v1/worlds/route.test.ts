@@ -89,6 +89,86 @@ Deno.test("Worlds API routes - GET operations", async (t) => {
     },
   );
 
+  await t.step(
+    "GET /v1/worlds/:world/download returns world data",
+    async () => {
+      const { id: accountId, apiKey } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        label: "Test World",
+        description: "Test Description",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      // Add dummy N-Quads data
+      const quads =
+        "<http://example.org/s> <http://example.org/p> <http://example.org/o> <http://example.org/g> .";
+      await db.worldBlobs.set(worldId, new TextEncoder().encode(quads));
+
+      // Test default (N-Quads)
+      const resp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}/download`, {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+          },
+        }),
+      );
+
+      assertEquals(resp.status, 200);
+      assertEquals(resp.headers.get("content-type"), "application/n-quads");
+      const body = await resp.text();
+      assert(body.includes("http://example.org/s"));
+
+      // Test Turtle format via format param
+      const turtleResp = await app.fetch(
+        new Request(
+          `http://localhost/v1/worlds/${worldId}/download?format=turtle`,
+          {
+            method: "GET",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+            },
+          },
+        ),
+      );
+
+      assertEquals(turtleResp.status, 200);
+      assertEquals(turtleResp.headers.get("content-type"), "text/turtle");
+      const turtleBody = await turtleResp.text();
+      assert(turtleBody.includes("<http://example.org/s>"));
+
+      // Test rate limiting (the 'test' account tier should have 100 capacity, but let's test a simple exhaustion if feasible)
+      // For brevity, we'll just check it succeeded once. The rate limit logic is tested elsewhere.
+    },
+  );
+
+  await t.step(
+    "GET /v1/worlds/:world/download returns 401 for unauthorized",
+    async () => {
+      const { id: accountId } = await createTestAccount(db);
+      const result = await db.worlds.add({
+        accountId,
+        label: "Test World",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      assert(result.ok);
+      const worldId = result.id;
+
+      const resp = await app.fetch(
+        new Request(`http://localhost/v1/worlds/${worldId}/download`, {
+          method: "GET",
+        }),
+      );
+
+      assertEquals(resp.status, 401);
+    },
+  );
+
   testContext.kv.close();
 });
 

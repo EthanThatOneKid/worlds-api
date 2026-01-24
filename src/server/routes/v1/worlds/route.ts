@@ -6,7 +6,19 @@ import {
   createWorldParamsSchema,
   updateWorldParamsSchema,
 } from "#/server/schemas.ts";
-import { getPlanPolicy } from "#/server/rate-limit/policies.ts";
+import { getPlanPolicy, getPolicy } from "#/server/rate-limit/policies.ts";
+import { Parser, Store, Writer } from "n3";
+import { TokenBucketRateLimiter } from "#/server/rate-limit/rate-limiter.ts";
+
+const SERIALIZATIONS: Record<string, { contentType: string; format: string }> =
+  {
+    "turtle": { contentType: "text/turtle", format: "Turtle" },
+    "n-quads": { contentType: "application/n-quads", format: "N-Quads" },
+    "n-triples": { contentType: "application/n-triples", format: "N-Triples" },
+    "n3": { contentType: "text/n3", format: "N3" },
+  };
+
+const DEFAULT_SERIALIZATION = SERIALIZATIONS["n-quads"];
 
 export default (appContext: AppContext) => {
   return new Router()
@@ -36,6 +48,107 @@ export default (appContext: AppContext) => {
         // TODO: Respond with different formats based on the relevant HTTP header.
 
         return Response.json({ ...result.value, id: worldId });
+      },
+    )
+    .get(
+      "/v1/worlds/:world/download",
+      async (ctx) => {
+        const worldId = ctx.params?.pathname.groups.world;
+        if (!worldId) {
+          return new Response("World ID required", { status: 400 });
+        }
+
+        const authorized = await authorizeRequest(appContext, ctx.request);
+        if (!authorized.account && !authorized.admin) {
+          return new Response("Unauthorized", { status: 401 });
+        }
+
+        const worldResult = await appContext.db.worlds.find(worldId);
+        if (
+          !worldResult || worldResult.value.deletedAt != null ||
+          (worldResult.value.accountId !== authorized.account?.id &&
+            !authorized.admin)
+        ) {
+          return new Response("World not found", { status: 404 });
+        }
+
+        // Apply rate limit
+        const plan = authorized.account?.value.plan ?? "free";
+        const policy = getPolicy(plan, "world_download");
+        const rateLimiter = new TokenBucketRateLimiter(appContext.kv);
+        const rateLimitResult = await rateLimiter.consume(
+          `${authorized.account?.id || "admin"}:world_download`,
+          1,
+          policy,
+        );
+
+        if (!rateLimitResult.allowed) {
+          return new Response("Rate limit exceeded", {
+            status: 429,
+            headers: {
+              "X-RateLimit-Limit": policy.capacity.toString(),
+              "X-RateLimit-Remaining": rateLimitResult.remaining.toString(),
+              "X-RateLimit-Reset": rateLimitResult.reset.toString(),
+            },
+          });
+        }
+
+        const url = new URL(ctx.request.url);
+        const formatParam = url.searchParams.get("format");
+        const acceptHeader = ctx.request.headers.get("Accept");
+
+        let serialization = DEFAULT_SERIALIZATION;
+        if (formatParam && SERIALIZATIONS[formatParam]) {
+          serialization = SERIALIZATIONS[formatParam];
+        } else if (acceptHeader) {
+          const match = Object.values(SERIALIZATIONS).find((s) =>
+            acceptHeader.includes(s.contentType)
+          );
+          if (match) {
+            serialization = match;
+          }
+        }
+
+        const worldBlob = await appContext.db.worldBlobs.find(worldId);
+        if (!worldBlob) {
+          return new Response("World data not found", { status: 404 });
+        }
+
+        // worldBlob.value is a Uint8Array
+        const worldString = new TextDecoder().decode(worldBlob.value);
+
+        // If requested format is already N-Quads (our internal storage format), return as is
+        if (serialization.format === "N-Quads") {
+          return new Response(worldString, {
+            headers: { "Content-Type": serialization.contentType },
+          });
+        }
+
+        // Otherwise, re-serialize using n3
+        try {
+          const parser = new Parser({ format: "N-Quads" });
+          const quads = parser.parse(worldString);
+          const store = new Store();
+          store.addQuads(quads);
+
+          const writer = new Writer({ format: serialization.format });
+          writer.addQuads(store.getQuads(null, null, null, null));
+          const result = await new Promise<string>((resolve, reject) => {
+            writer.end((error, result) => {
+              if (error) reject(error);
+              else resolve(result as string);
+            });
+          });
+
+          return new Response(result, {
+            headers: { "Content-Type": serialization.contentType },
+          });
+        } catch (error) {
+          console.error("Serialization error:", error);
+          return new Response("Failed to serialize world data", {
+            status: 500,
+          });
+        }
       },
     )
     .put(

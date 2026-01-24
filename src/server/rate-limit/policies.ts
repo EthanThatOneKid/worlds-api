@@ -3,7 +3,11 @@ import type { RateLimitPolicy } from "./interfaces.ts";
 /**
  * ResourceType defines the types of resources that can be rate limited.
  */
-export type ResourceType = "sparql_query" | "sparql_update" | "search";
+export type ResourceType =
+  | "sparql_query"
+  | "sparql_update"
+  | "search"
+  | "world_download";
 
 /**
  * PlanPolicy defines the limits for a specific tier.
@@ -43,6 +47,11 @@ export const Policies: Record<string, PlanPolicy> = {
         capacity: 60,
         refillRate: 60,
       },
+      world_download: {
+        interval: 60 * 1000, // 1 minute
+        capacity: 10,
+        refillRate: 10,
+      },
     },
     worldLimits: {
       maxWorlds: 3,
@@ -66,6 +75,11 @@ export const Policies: Record<string, PlanPolicy> = {
         capacity: 1000,
         refillRate: 1000,
       },
+      world_download: {
+        interval: 60 * 1000,
+        capacity: 100,
+        refillRate: 100,
+      },
     },
     worldLimits: {
       maxWorlds: 100,
@@ -85,6 +99,11 @@ export const Policies: Record<string, PlanPolicy> = {
         refillRate: 100,
       },
       search: {
+        interval: 60 * 1000,
+        capacity: 100,
+        refillRate: 100,
+      },
+      world_download: {
         interval: 60 * 1000,
         capacity: 100,
         refillRate: 100,

@@ -132,3 +132,8 @@ export interface SparqlQuadsResults {
   };
   boolean?: undefined;
 }
+
+/**
+ * RdfFormat represents the supported RDF serialization formats for download.
+ */
+export type RdfFormat = "turtle" | "n-quads" | "n-triples" | "n3";
