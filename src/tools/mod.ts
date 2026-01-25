@@ -1,3 +1,4 @@
+export * from "./format.ts";
 export * from "./types.ts";
 export * from "./tools.ts";
 export * from "./search-facts/tool.ts";
