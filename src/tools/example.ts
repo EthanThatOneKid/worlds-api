@@ -36,12 +36,14 @@ async function createExampleContext(): Promise<AppContext> {
   const loadStart = performance.now();
   await embeddings.load();
   const loadTime = performance.now() - loadStart;
+  const loadTimeSeconds = (loadTime / 1000).toFixed(2);
   console.log(
-    "%c[INFO]%c Embeddings model loaded in %c%.2fs",
+    "%c[INFO]%c Embeddings model loaded in %c%s%s",
     "color: #6366f1; font-weight: bold",
     "color: #64748b",
     "color: #10b981; font-weight: bold",
-    (loadTime / 1000).toFixed(2),
+    loadTimeSeconds,
+    "s",
   );
 
   return {
@@ -97,9 +99,7 @@ if (import.meta.main) {
     write: true,
     userIri: "https://etok.me/",
     sources: [
-      {
-        worldId: worldRecord.id,
-      },
+      { worldId: worldRecord.id },
     ],
   };
 
@@ -216,7 +216,7 @@ if (import.meta.main) {
     const startTime = Date.now();
     let stepCount = 0;
 
-    console.log("\n%c✦ Assistant", "color: #10b981; font-weight: bold");
+    console.log("\n%c✦ Assistant", "color: #f59e0b; font-weight: bold");
 
     const spinner = new Spinner({ message: "Thinking...", color: "yellow" });
     spinner.start();
@@ -239,7 +239,7 @@ if (import.meta.main) {
             if (part.text) {
               await Deno.stdout.write(
                 new TextEncoder().encode(
-                  `\x1b[38;2;16;185;129m${part.text}\x1b[0m`,
+                  `\x1b[38;2;245;158;11m${part.text}\x1b[0m`,
                 ),
               );
             }
@@ -250,45 +250,6 @@ if (import.meta.main) {
             spinner.stop();
             toolCalls.set(part.toolCallId, part);
             stepCount++;
-
-            // Debug: Log tool call start.
-            const timestamp = new Date().toISOString();
-            let callPreview = "";
-            const toolInput = "input" in part ? part.input as unknown : {};
-            switch (part.toolName) {
-              case "generateIri": {
-                const input = toolInput as { entityText?: string };
-                callPreview = `entityText: "${input?.entityText ?? "N/A"}"`;
-                break;
-              }
-              case "executeSparql": {
-                const input = toolInput as { sparql?: string };
-                const sparql = input?.sparql?.trim() || "";
-                const preview = sparql.split("\n")[0] ||
-                  sparql.substring(0, 60);
-                callPreview = `sparql: "${preview}${
-                  sparql.length > 60 ? "..." : ""
-                }"`;
-                break;
-              }
-              case "searchFacts": {
-                const input = toolInput as { query?: string };
-                callPreview = `query: "${input?.query ?? "N/A"}"`;
-                break;
-              }
-              default: {
-                callPreview = JSON.stringify(toolInput).substring(0, 100);
-              }
-            }
-
-            console.log(
-              `\n%c[DEBUG]%c [${timestamp}] Step ${stepCount}: Calling %c${part.toolName}%c with %c${callPreview}`,
-              "color: #6366f1; font-weight: bold",
-              "color: #64748b",
-              "color: #10b981; font-weight: bold",
-              "color: #64748b",
-              "color: #cbd5e1",
-            );
             break;
           }
 
@@ -297,72 +258,29 @@ if (import.meta.main) {
             const call = toolCalls.get(part.toolCallId);
             if (!call) break;
 
-            const timestamp = new Date().toISOString();
-            const styles = [
-              "color: #64748b", // gear icon
-              "color: #94a3b8", // name
-              "color: #cbd5e1", // input
-              "color: #94a3b8", // name end
-              "color: #d97706", // arrow
-              "color: #d97706", // output
-            ];
-
-            let callDetail = "";
-            let inputPreview = "";
-            const callInput = "input" in call ? call.input as unknown : {};
-            switch (call.toolName) {
-              case "generateIri": {
-                const input = callInput as { entityText?: string };
-                callDetail = `generateIri(%c${input.entityText}%c)`;
-                inputPreview = `entityText: "${input.entityText}"`;
-                break;
-              }
-              case "executeSparql": {
-                const input = callInput as { sparql?: string };
-                const sparql = input.sparql?.trim() || "";
-                const sparqlPreview = sparql.length > 200
-                  ? `${sparql.substring(0, 200)}...`
-                  : sparql;
-                callDetail = `executeSparql(%c${sparqlPreview}%c)`;
-                inputPreview = `sparql: ${sparql.split("\n").length} lines`;
-                break;
-              }
-              case "searchFacts": {
-                const input = callInput as { query?: string };
-                callDetail = `searchFacts(%c${input.query}%c)`;
-                inputPreview = `query: "${input.query}"`;
-                break;
-              }
-              default: {
-                const inputStr = JSON.stringify(callInput);
-                const inputPreviewStr = inputStr.length > 100
-                  ? `${inputStr.substring(0, 100)}...`
-                  : inputStr;
-                callDetail = `${call.toolName}(%c${inputPreviewStr}%c)`;
-                inputPreview = inputStr.substring(0, 100);
-              }
-            }
-
-            // Format output for better readability.
             const partOutput = "output" in part ? part.output as unknown : part;
+            const callInput = "input" in call ? call.input as unknown : {};
+
+            // Format output for display
             let outputStr = "";
             try {
               if (typeof partOutput === "string") {
-                outputStr = partOutput.length > 500
-                  ? `${partOutput.substring(0, 500)}...`
+                outputStr = partOutput.length > 200
+                  ? `${partOutput.substring(0, 200)}...`
                   : partOutput;
+              } else if (partOutput === null || partOutput === undefined) {
+                outputStr = "null";
               } else {
                 const jsonStr = JSON.stringify(partOutput, null, 2);
-                outputStr = jsonStr.length > 500
-                  ? `${jsonStr.substring(0, 500)}...`
+                outputStr = jsonStr.length > 200
+                  ? `${jsonStr.substring(0, 200)}...`
                   : jsonStr;
               }
             } catch {
               outputStr = String(partOutput);
             }
 
-            // Check if this is an error result - check multiple error formats
-            // Also check if output is a string that looks like an error
+            // Check if this is an error result
             const outputStrLower = typeof partOutput === "string"
               ? partOutput.toLowerCase()
               : "";
@@ -383,104 +301,75 @@ if (import.meta.main) {
                   partOutput.toString().includes("Error"))
               ));
 
-            // Log detailed debug info.
-            console.log(
-              `\n%c[DEBUG]%c [${timestamp}] Tool result for %c${call.toolName}%c:`,
-              "color: #6366f1; font-weight: bold",
-              "color: #64748b",
-              "color: #10b981; font-weight: bold",
-              "color: #64748b",
-            );
-            console.log(
-              `  %cInput:%c ${inputPreview}`,
-              "color: #94a3b8; font-weight: bold",
-              "color: #cbd5e1",
-            );
-
-            // For executeSparql, show the full SPARQL query in debug
-            if (call.toolName === "executeSparql") {
-              const input = callInput as { sparql?: string };
-              const fullSparql = input.sparql?.trim() || "";
-              if (fullSparql.length > 0) {
-                console.log(
-                  `  %cFull SPARQL:%c\n%c${fullSparql}`,
-                  "color: #94a3b8; font-weight: bold",
-                  "color: #cbd5e1",
-                  "color: #9ca3af; font-family: monospace; font-size: 0.9em; white-space: pre-wrap",
-                );
+            // Format call detail for display
+            let callDetail = "";
+            switch (call.toolName) {
+              case "generateIri": {
+                const input = callInput as { entityText?: string };
+                callDetail = `generateIri(${
+                  input.entityText ? `"${input.entityText}"` : ""
+                })`;
+                break;
+              }
+              case "executeSparql": {
+                const input = callInput as { sparql?: string };
+                const sparql = input.sparql?.trim() || "";
+                callDetail = `executeSparql(\n${sparql}\n)`;
+                break;
+              }
+              case "searchFacts": {
+                const input = callInput as { query?: string };
+                callDetail = `searchFacts("${input.query || ""}")`;
+                break;
+              }
+              default: {
+                const inputStr = JSON.stringify(callInput, null, 2);
+                callDetail = `${call.toolName}(\n${inputStr}\n)`;
               }
             }
 
+            // Log formatted tool call and result
             if (isError) {
-              // Extract error message more thoroughly
-              let errorMessage = outputStr;
+              let errorStr = "";
               if (partOutput instanceof Error) {
-                errorMessage = partOutput.message;
+                errorStr = partOutput.message;
               } else if (
                 typeof partOutput === "object" && partOutput !== null
               ) {
                 const errorObj = partOutput as {
                   error?: string;
                   message?: string;
-                  toString?: () => string;
                 };
-                errorMessage = errorObj.error || errorObj.message ||
-                  (errorObj.toString
-                    ? errorObj.toString()
-                    : JSON.stringify(partOutput));
+                errorStr = errorObj.error || errorObj.message ||
+                  JSON.stringify(partOutput);
+              } else {
+                errorStr = outputStr;
               }
 
               console.log(
-                `  %cError:%c ${errorMessage}`,
+                `\n%c⚙%c ${callDetail} => %c${errorStr}`,
+                "color: #64748b",
+                "color: #94a3b8",
                 "color: #ef4444; font-weight: bold",
-                "color: #fca5a5",
               );
 
-              // For size limit errors, show the actual size and limit
+              // For size limit errors, show helpful note
               if (
-                errorMessage.includes("size limit") ||
-                errorMessage.includes("413")
+                errorStr.includes("size limit") ||
+                errorStr.includes("413")
               ) {
                 console.log(
-                  `  %cNote:%c Free plan allows up to 10MB per world. Check if the world blob is unexpectedly large.`,
+                  `  %cNote:%c Free plan allows up to 10MB per world.`,
                   "color: #f59e0b; font-weight: bold",
                   "color: #fbbf24",
                 );
               }
             } else {
               console.log(
-                `  %cOutput:%c ${outputStr}`,
-                "color: #10b981; font-weight: bold",
-                "color: #d1fae5",
-              );
-            }
-
-            // Also log the formatted version for visual consistency.
-            if (isError) {
-              // Format error output with better visibility
-              let errorStr = "";
-              if (partOutput instanceof Error) {
-                errorStr = partOutput.message;
-              } else {
-                const errorObj = partOutput as {
-                  error?: string;
-                  message?: string;
-                };
-                errorStr = errorObj.error || errorObj.message ||
-                  JSON.stringify(partOutput);
-              }
-              // Use red color for errors
-              console.log(
-                `\n%c⚙ %c${callDetail}%c => %c${errorStr}`,
-                styles[0], // gear icon
-                styles[1], // name
-                styles[2], // input
-                "color: #ef4444; font-weight: bold", // error output in red
-              );
-            } else {
-              console.log(
-                `\n%c⚙ %c${callDetail}%c => %c${outputStr}`,
-                ...styles,
+                `\n%c⚙%c ${callDetail} => %c${outputStr}`,
+                "color: #64748b",
+                "color: #94a3b8",
+                "color: #10b981",
               );
             }
             break;

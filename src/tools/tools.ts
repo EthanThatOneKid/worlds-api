@@ -3,6 +3,7 @@ import { createExecuteSparqlTool } from "./execute-sparql/tool.ts";
 import { createSearchFactsTool } from "./search-facts/tool.ts";
 import { createGenerateIriTool } from "./generate-iri/tool.ts";
 import type { CreateToolsOptions } from "./types.ts";
+import { getDefaultSource, validateSources } from "./utils.ts";
 
 /**
  * generateIri generates a random IRI using the ulid library
@@ -17,6 +18,19 @@ export function createTools(options: CreateToolsOptions): {
   searchFacts: ReturnType<typeof createSearchFactsTool>;
   generateIri?: ReturnType<typeof createGenerateIriTool>;
 } {
+  // Validate sources for duplicates
+  validateSources(options.sources);
+
+  // If write mode is enabled, require a default source
+  if (options.write) {
+    const defaultSource = getDefaultSource(options.sources);
+    if (!defaultSource) {
+      throw new Error(
+        "Write mode requires a default source to be configured",
+      );
+    }
+  }
+
   const tools: {
     executeSparql: ReturnType<typeof createExecuteSparqlTool>;
     searchFacts: ReturnType<typeof createSearchFactsTool>;
@@ -29,7 +43,6 @@ export function createTools(options: CreateToolsOptions): {
   if (options.write) {
     tools.generateIri = createGenerateIriTool(
       options.generateIri ?? generateIri,
-      options,
     );
   }
 

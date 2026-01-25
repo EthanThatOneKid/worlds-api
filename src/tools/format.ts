@@ -1,5 +1,5 @@
 import type { CreateToolsOptions, SourceOptions } from "./types.ts";
-import { getDefaultSource } from "./utils.ts";
+import { getDefaultSource, normalizeSources } from "./utils.ts";
 
 /**
  * formatWorldIdList formats a list of world IDs into a human-readable string.
@@ -29,7 +29,8 @@ export function formatWorldIdList(worldIds: string[]): string {
 export function formatDefaultSourceInfo(
   options: CreateToolsOptions,
 ): string {
-  const defaultSource = getDefaultSource(options.sources);
+  const normalizedSources = normalizeSources(options.sources);
+  const defaultSource = getDefaultSource(normalizedSources);
   if (!defaultSource) {
     return "";
   }
@@ -46,9 +47,9 @@ export function formatDefaultSourceInfo(
 export function formatAvailableWorldsInfo(
   options: CreateToolsOptions,
 ): string {
-  const sources = options.sources;
-  if (!sources || sources.length === 0) {
-    return "No worlds are configured.";
+  const sources = normalizeSources(options.sources);
+  if (sources.length === 0) {
+    return "All worlds are accessible (no source restrictions configured).";
   }
 
   if (sources.length === 1) {
@@ -76,10 +77,10 @@ export function formatAvailableWorldsInfo(
 export function formatWorldIdParameterHelp(
   options: CreateToolsOptions,
 ): string {
-  const sources = options.sources;
+  const sources = normalizeSources(options.sources);
   const defaultSource = getDefaultSource(sources);
-  if (!sources || sources.length === 0) {
-    return "No worlds are configured. You must provide a worldId.";
+  if (sources.length === 0) {
+    return "The worldId parameter is required. All worlds are accessible, so you must specify which world to query.";
   }
 
   if (defaultSource) {
@@ -147,7 +148,6 @@ export function formatSearchFactsDescription(
   options: CreateToolsOptions,
 ): string {
   const parts: string[] = [];
-
   parts.push(
     "Search for facts across knowledge bases using full-text and semantic vector search. This tool is ideal for discovering entities, relationships, and information when you don't know exact IRIs or want to explore topics broadly.",
   );
@@ -164,26 +164,6 @@ export function formatSearchFactsDescription(
   parts.push(
     "Use the worldId values from search results to determine which specific world to query with executeSparql when you need to perform targeted SPARQL queries or updates.",
   );
-
-  return parts.join("\n\n");
-}
-
-/**
- * formatGenerateIriDescription generates the full description for generateIri tool.
- */
-export function formatGenerateIriDescription(
-  options: CreateToolsOptions,
-): string {
-  const parts: string[] = [];
-  parts.push(
-    "Generate a unique IRI for a new entity. Use this when you need to insert a new node into the graph.",
-  );
-
-  if (options.write) {
-    parts.push(
-      "After generating an IRI, use executeSparql to insert the new entity into the knowledge base with an INSERT DATA or INSERT query.",
-    );
-  }
 
   return parts.join("\n\n");
 }
@@ -251,9 +231,10 @@ export function formatPrompt(options: FormatPromptOptions): string {
   }
 
   // Include information about available sources (worlds).
-  if (options.sources && options.sources.length > 0) {
-    const defaultSource = getDefaultSource(options.sources);
-    const sourceDescriptions = options.sources.map((source) => {
+  const normalizedSources = normalizeSources(options.sources);
+  if (normalizedSources.length > 0) {
+    const defaultSource = getDefaultSource(normalizedSources);
+    const sourceDescriptions = normalizedSources.map((source) => {
       const parts: string[] = [];
       parts.push(`- World ID: ${source.worldId}`);
       if (source.default) {

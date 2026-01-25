@@ -5,15 +5,18 @@ import type { WorldsSearchResult } from "#/sdk/types.ts";
 import { Worlds } from "#/sdk/worlds.ts";
 import type { CreateToolsOptions } from "#/tools/types.ts";
 import { formatSearchFactsDescription } from "#/tools/format.ts";
+import { normalizeSources } from "#/tools/utils.ts";
 
 /**
  * createSearchFactsTool creates a search facts tool for a world.
  */
-export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
-  query: string;
-  limit?: number | undefined;
-  worldIds?: string[] | undefined;
-}, WorldsSearchResult[]> {
+export function createSearchFactsTool(options: CreateToolsOptions): Tool<
+  {
+    query: string;
+    limit?: number | undefined;
+  },
+  WorldsSearchResult[]
+> {
   const worlds = new Worlds(options);
   return tool({
     description: formatSearchFactsDescription(options),
@@ -24,17 +27,12 @@ export function createSearchFactsTool(options: CreateToolsOptions): Tool<{
       limit: z.number().min(1).max(100).optional().describe(
         "Maximum number of facts to return (default: 10). Use lower limits for focused searches, higher limits when exploring broadly.",
       ),
-      worldIds: z.array(z.string()).optional().describe(
-        `Optional list of world IDs to search within. If not provided, searches all configured worlds: ${
-          options.sources?.map((s) => s.worldId).join(", ") ?? "none"
-        }.`,
-      ),
     }),
-    execute: async ({ query, limit, worldIds }) => {
+    execute: async ({ query, limit }) => {
+      const normalizedSources = normalizeSources(options.sources);
+      const worldIds = normalizedSources.map((source) => source.worldId);
       return await worlds.search(query, {
-        worldIds: worldIds ??
-          options.sources?.map((source) => source.worldId) ??
-          [],
+        worldIds,
         limit: limit ?? 10,
       });
     },

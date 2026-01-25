@@ -16,10 +16,13 @@ import { formatExecuteSparqlDescription } from "#/tools/format.ts";
  */
 export function createExecuteSparqlTool(
   options: CreateToolsOptions,
-): Tool<{
-  sparql: string;
-  worldId?: string;
-}, SparqlResult | null> {
+): Tool<
+  {
+    sparql: string;
+    worldId?: string;
+  },
+  SparqlResult | null
+> {
   const worlds = new Worlds(options);
 
   return tool({
@@ -35,31 +38,16 @@ export function createExecuteSparqlTool(
       ),
     }),
     execute: async ({ sparql, worldId }) => {
-      // Determine which source to use
-      let source;
-      let resolvedWorldId: string;
-
-      if (worldId) {
-        source = getSourceByWorldId(options, worldId);
-        if (!source) {
-          throw new Error(
-            `World ${worldId} is not configured in sources. Available worlds: ${
-              options.sources?.map((s) => s.worldId).join(", ") ?? "none"
-            }`,
-          );
-        }
-        resolvedWorldId = worldId;
-      } else {
-        source = getDefaultSource(options.sources);
-        if (!source) {
-          throw new Error(
-            "No default source configured and worldId was not provided. Please provide a worldId or configure a default source.",
-          );
-        }
-        resolvedWorldId = source.worldId;
+      const source = worldId
+        ? getSourceByWorldId(options, worldId)
+        : getDefaultSource(options.sources);
+      if (!source?.worldId) {
+        throw new Error(
+          "World ID is required. All worlds are accessible, so you must specify which world to query.",
+        );
       }
 
-      // Validate write permissions for update queries
+      // Validate write permissions for update queries.
       if (isUpdateQuery(sparql) && !options.write) {
         throw new Error(
           "Write operations are disabled. This tool is configured as read-only. " +
@@ -67,7 +55,7 @@ export function createExecuteSparqlTool(
         );
       }
 
-      return await worlds.sparql(resolvedWorldId, sparql);
+      return await worlds.sparql(source.worldId, sparql);
     },
   });
 }
