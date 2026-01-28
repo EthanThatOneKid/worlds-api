@@ -3,6 +3,7 @@
 [![JSR](https://jsr.io/badges/@fartlabs/worlds)](https://jsr.io/@fartlabs/worlds)
 [![JSR score](https://jsr.io/badges/@fartlabs/worlds/score)](https://jsr.io/@fartlabs/worlds/score)
 [![GitHub Actions](https://github.com/wazootech/worlds-api/actions/workflows/check.yaml/badge.svg)](https://github.com/wazootech/worlds-api/actions/workflows/check.yaml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/wazootech/worlds-api)
 
 **Worlds API™** is a REST API designed to manage, query, update, and reason over
 [SPARQL 1.1](https://www.w3.org/TR/sparql11-overview/)-compatible knowledge
